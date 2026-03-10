@@ -11,6 +11,18 @@
       "versionNumber": "0.1.0.NEXT",
       "default": true,
       "versionDescription": ""
+    },
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "force-app",
+      "default": false,
+      "package": "uBox Unlocked",
+      "versionDescription": ""
     }
-  ]
+  ],
+  "packageAliases": {
+    "uBox Unlocked": "0Hofj0000001V4zCAE",
+    "uBox Unlocked@0.1.0-1": "04tfj000000G6r3AAC"
+  }
 }

@@ -16,5 +16,5 @@
     <tabs>Create_User</tabs>
     <tabs>Edit_User</tabs>
     <uiType>Lightning</uiType>
-    <utilityBar>uBox_UtilityBar</utilityBar>
+
 </CustomApplication>
