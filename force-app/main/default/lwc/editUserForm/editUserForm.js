@@ -124,12 +124,7 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     }
 
     handleOpenUserRecord() {
-        this[NavigationMixin.Navigate]({
-            type: 'standard__webPage',
-            attributes: {
-                url: '/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view'
-            }
-        });
+        window.open('/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view', '_blank');
     }
 
     // --- Field change handlers ---
