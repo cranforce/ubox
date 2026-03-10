@@ -22,3 +22,7 @@ npm-debug.log*
 # IDE
 *.swp
 *.swo
+
+# Claude settings
+CLAUDE.md
+.claude/

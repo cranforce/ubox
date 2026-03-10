@@ -1,0 +1,219 @@
+<template>
+    <div class="slds-grid slds-wrap slds-gutters">
+        <!-- Name -->
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="First Name"
+                value={firstName}
+                data-field="FirstName"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Last Name"
+                value={lastName}
+                data-field="LastName"
+                required
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+
+        <!-- Email & Username -->
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Email"
+                type="email"
+                value={email}
+                data-field="Email"
+                required
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Username"
+                value={username}
+                data-field="Username"
+                required
+                message-when-value-missing="Username is required and must be in email format"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+
+        <!-- Alias & Active -->
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Alias"
+                value={alias}
+                data-field="Alias"
+                required
+                max-length="8"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small slds-var-p-top_medium">
+            <lightning-input
+                type="toggle"
+                label="Active"
+                checked={isActive}
+                data-field="IsActive"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+
+        <!-- User License, Profile & Role -->
+        <div class="slds-col slds-size_1-of-1 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="User License"
+                value={userLicenseId}
+                options={userLicenseOptions}
+                data-field="UserLicenseId"
+                required
+                placeholder="Select a user license..."
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Profile"
+                value={profileId}
+                options={profileOptions}
+                data-field="ProfileId"
+                required
+                placeholder="Select a profile..."
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Role"
+                value={userRoleId}
+                options={roleOptions}
+                data-field="UserRoleId"
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+
+        <!-- Department, Title, Company -->
+        <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_small">
+            <lightning-input
+                label="Department"
+                value={department}
+                data-field="Department"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_small">
+            <lightning-input
+                label="Title"
+                value={title}
+                data-field="Title"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_small">
+            <lightning-input
+                label="Company"
+                value={companyName}
+                data-field="CompanyName"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+
+        <!-- Locale Settings -->
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Time Zone"
+                value={timeZoneSidKey}
+                options={timezoneOptions}
+                data-field="TimeZoneSidKey"
+                required
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Locale"
+                value={localeSidKey}
+                options={localeOptions}
+                data-field="LocaleSidKey"
+                required
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Language"
+                value={languageLocaleKey}
+                options={languageOptions}
+                data-field="LanguageLocaleKey"
+                required
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-combobox
+                label="Email Encoding"
+                value={emailEncodingKey}
+                options={emailEncodingOptions}
+                data-field="EmailEncodingKey"
+                required
+                onchange={handleFieldChange}
+            ></lightning-combobox>
+        </div>
+
+        <!-- Feature Licenses -->
+        <div class="slds-col slds-size_1-of-1 slds-var-p-top_medium slds-var-p-bottom_small">
+            <h3 class="slds-text-heading_small slds-var-p-bottom_x-small">Feature Licenses</h3>
+            <div class="slds-grid slds-wrap slds-gutters_x-small">
+                <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_x-small">
+                    <lightning-input
+                        type="checkbox"
+                        label="Marketing User"
+                        checked={marketingUser}
+                        data-field="UserPermissionsMarketingUser"
+                        onchange={handleFieldChange}
+                    ></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_x-small">
+                    <lightning-input
+                        type="checkbox"
+                        label="Knowledge User"
+                        checked={knowledgeUser}
+                        data-field="UserPermissionsKnowledgeUser"
+                        onchange={handleFieldChange}
+                    ></lightning-input>
+                </div>
+
+                <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_x-small">
+                    <lightning-input
+                        type="checkbox"
+                        label="Service Cloud User"
+                        checked={supportUser}
+                        data-field="UserPermissionsSupportUser"
+                        onchange={handleFieldChange}
+                    ></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_x-small">
+                    <lightning-input
+                        type="checkbox"
+                        label="Interaction User"
+                        checked={interactionUser}
+                        data-field="UserPermissionsInteractionUser"
+                        onchange={handleFieldChange}
+                    ></lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-3 slds-var-p-bottom_x-small">
+                    <lightning-input
+                        type="checkbox"
+                        label="Salesforce CRM Content User"
+                        checked={sfContentUser}
+                        data-field="UserPermissionsSFContentUser"
+                        onchange={handleFieldChange}
+                    ></lightning-input>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

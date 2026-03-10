@@ -13,6 +13,8 @@
     <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
     <label>uBox</label>
     <navType>Standard</navType>
+    <tabs>Create_User</tabs>
+    <tabs>Edit_User</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>uBox_UtilityBar</utilityBar>
 </CustomApplication>
