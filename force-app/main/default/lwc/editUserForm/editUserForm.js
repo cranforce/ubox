@@ -127,7 +127,7 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
         this[NavigationMixin.Navigate]({
             type: 'standard__webPage',
             attributes: {
-                url: '/lightning/setup/ManageUsers/page?address=/' + encodeURIComponent(this.selectedUserId)
+                url: '/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view'
             }
         });
     }
