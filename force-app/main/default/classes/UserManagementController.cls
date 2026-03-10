@@ -596,9 +596,10 @@ public with sharing class UserManagementController {
         if (String.isBlank(u.LanguageLocaleKey)) missingFields.add('Language');
 
         if (!missingFields.isEmpty()) {
-            throw new AuraHandledException(
-                'Missing required fields: ' + String.join(missingFields, ', ')
-            );
+            String msg = 'Missing required fields: ' + String.join(missingFields, ', ');
+            AuraHandledException ex = new AuraHandledException(msg);
+            ex.setMessage(msg);
+            throw ex;
         }
     }
 }

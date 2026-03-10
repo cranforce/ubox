@@ -5,11 +5,11 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "path": "force-app",
-      "package": "uBox",
-      "versionName": "v0.0.1",
+      "versionName": "ver 0.1",
       "versionNumber": "0.1.0.NEXT",
+      "path": "force-app",
       "default": true,
+      "package": "uBox",
       "versionDescription": ""
     },
     {
@@ -23,6 +23,9 @@
   ],
   "packageAliases": {
     "uBox Unlocked": "0Hofj0000001V4zCAE",
-    "uBox Unlocked@0.1.0-1": "04tfj000000G6r3AAC"
+    "uBox Unlocked@0.1.0-1": "04tfj000000G6r3AAC",
+    "uBox": "0Hofj0000001V6bCAE",
+    "uBox@0.1.0-1": "04tfj000000G83FAAS",
+    "uBox@0.1.0-2": "04tfj000000G885AAC"
   }
 }
