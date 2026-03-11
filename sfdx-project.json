@@ -5,8 +5,8 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "versionName": "ver 0.2",
-      "versionNumber": "0.2.0.NEXT",
+      "versionName": "ver 0.3",
+      "versionNumber": "0.3.0.NEXT",
       "path": "force-app",
       "default": true,
       "package": "uBox",
@@ -14,8 +14,8 @@
       "versionDescription": "Managed 2GP package for streamlined user creation and editing with permission and license assignment"
     },
     {
-      "versionName": "ver 0.2",
-      "versionNumber": "0.2.0.NEXT",
+      "versionName": "ver 0.3",
+      "versionNumber": "0.3.0.NEXT",
       "path": "force-app",
       "default": false,
       "package": "uBox Unlocked",
