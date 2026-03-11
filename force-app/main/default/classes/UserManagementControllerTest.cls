@@ -90,6 +90,14 @@ private class UserManagementControllerTest {
         System.assertNotEquals(null, userId, 'Should return created user Id');
         User created = [SELECT LastName, Email FROM User WHERE Id = :userId];
         System.assertEquals('UserCreate', created.LastName);
+
+        List<uBox_Log__c> logs = [
+            SELECT Action__c, Status__c, Target_User__c
+            FROM uBox_Log__c
+            WHERE Target_User__c = :userId AND Action__c = 'Create User'
+        ];
+        System.assertEquals(1, logs.size(), 'Should create a log record for user creation');
+        System.assertEquals('Success', logs[0].Status__c);
     }
 
     @IsTest
@@ -160,6 +168,14 @@ private class UserManagementControllerTest {
         User updated = [SELECT FirstName, LastName FROM User WHERE Id = :testUser.Id];
         System.assertEquals('EditUpdated', updated.FirstName, 'FirstName should be updated');
         System.assertEquals('TestUserUpdated', updated.LastName, 'LastName should be updated');
+
+        List<uBox_Log__c> logs = [
+            SELECT Action__c, Status__c, Target_User__c
+            FROM uBox_Log__c
+            WHERE Target_User__c = :testUser.Id AND Action__c = 'Edit User'
+        ];
+        System.assertEquals(1, logs.size(), 'Should create a log record for user update');
+        System.assertEquals('Success', logs[0].Status__c);
     }
 
     @IsTest

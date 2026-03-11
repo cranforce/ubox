@@ -16,16 +16,58 @@
         <apexClass>UserUpdateAssignmentQueueable</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>uBoxLogService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <description>Full access to uBox user management features</description>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>uBox_Log__c.Action__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>uBox_Log__c.Detail__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>uBox_Log__c.Performed_By__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>uBox_Log__c.Status__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>uBox_Log__c.Target_User__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>uBox Admin</label>
     <license>Salesforce</license>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>uBox_Log__c</object>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
     <tabSettings>
         <tab>Create_User</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
         <tab>Edit_User</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>uBox_Log__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <userPermissions>

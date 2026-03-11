@@ -291,14 +291,28 @@ public with sharing class UserManagementController {
         try {
             insert newUser;
         } catch (DmlException e) {
+            uBoxLogService.createLog('Create User', null, UserInfo.getUserId(), 'Error', e.getDmlMessage(0));
             throw new AuraHandledException(e.getDmlMessage(0));
         }
 
-        Boolean hasAssignments = (permissionSetIds != null && !permissionSetIds.isEmpty())
-            || (groupIds != null && !groupIds.isEmpty())
-            || (packageLicenseIds != null && !packageLicenseIds.isEmpty())
-            || (permSetLicenseIds != null && !permSetLicenseIds.isEmpty())
-            || (permSetGroupIds != null && !permSetGroupIds.isEmpty());
+        Integer assignmentCount =
+            (permissionSetIds != null ? permissionSetIds.size() : 0) +
+            (groupIds != null ? groupIds.size() : 0) +
+            (packageLicenseIds != null ? packageLicenseIds.size() : 0) +
+            (permSetLicenseIds != null ? permSetLicenseIds.size() : 0) +
+            (permSetGroupIds != null ? permSetGroupIds.size() : 0);
+
+        String detailJson = JSON.serialize(new Map<String, Object>{
+            'user' => newUser.LastName + ', ' + newUser.FirstName,
+            'permissionSets' => permissionSetIds != null ? permissionSetIds.size() : 0,
+            'groups' => groupIds != null ? groupIds.size() : 0,
+            'packageLicenses' => packageLicenseIds != null ? packageLicenseIds.size() : 0,
+            'permSetLicenses' => permSetLicenseIds != null ? permSetLicenseIds.size() : 0,
+            'permSetGroups' => permSetGroupIds != null ? permSetGroupIds.size() : 0
+        });
+        uBoxLogService.createLog('Create User', newUser.Id, UserInfo.getUserId(), 'Success', detailJson);
+
+        Boolean hasAssignments = assignmentCount > 0;
 
         if (hasAssignments) {
             System.enqueueJob(new UserAssignmentQueueable(
@@ -307,7 +321,8 @@ public with sharing class UserManagementController {
                 groupIds != null ? groupIds : new List<Id>(),
                 packageLicenseIds != null ? packageLicenseIds : new List<Id>(),
                 permSetLicenseIds != null ? permSetLicenseIds : new List<Id>(),
-                permSetGroupIds != null ? permSetGroupIds : new List<Id>()
+                permSetGroupIds != null ? permSetGroupIds : new List<Id>(),
+                UserInfo.getUserId()
             ));
         }
 
@@ -462,8 +477,19 @@ public with sharing class UserManagementController {
         try {
             update existingUser;
         } catch (DmlException e) {
+            uBoxLogService.createLog('Edit User', userId, UserInfo.getUserId(), 'Error', e.getDmlMessage(0));
             throw new AuraHandledException(e.getDmlMessage(0));
         }
+
+        String editDetailJson = JSON.serialize(new Map<String, Object>{
+            'user' => existingUser.LastName + ', ' + existingUser.FirstName,
+            'permissionSets' => permissionSetIds != null ? permissionSetIds.size() : 0,
+            'permSetGroups' => permSetGroupIds != null ? permSetGroupIds.size() : 0,
+            'permSetLicenses' => permSetLicenseIds != null ? permSetLicenseIds.size() : 0,
+            'groups' => groupIds != null ? groupIds.size() : 0,
+            'packageLicenses' => packageLicenseIds != null ? packageLicenseIds.size() : 0
+        });
+        uBoxLogService.createLog('Edit User', userId, UserInfo.getUserId(), 'Success', editDetailJson);
 
         // Compute diffs for assignments
         if (permissionSetIds == null) permissionSetIds = new List<Id>();
@@ -577,7 +603,8 @@ public with sharing class UserManagementController {
                 permSetGroupsToAdd, permSetGroupsToRemove,
                 permSetLicensesToAdd, permSetLicensesToRemove,
                 groupsToAdd, groupsToRemove,
-                packageLicensesToAdd, packageLicensesToRemove
+                packageLicensesToAdd, packageLicensesToRemove,
+                UserInfo.getUserId()
             ));
         }
     }

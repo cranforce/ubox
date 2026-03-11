@@ -42,7 +42,8 @@ private class UserUpdateAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -57,6 +58,12 @@ private class UserUpdateAssignmentQueueableTest {
         }
         System.assert(!assignedIds.contains(psToRemove.Id), 'Removed perm set should be gone');
         System.assert(assignedIds.contains(psToAdd.Id), 'Added perm set should be assigned');
+
+        List<uBox_Log__c> logs = [
+            SELECT Status__c FROM uBox_Log__c
+            WHERE Target_User__c = :testUser.Id AND Action__c = 'Edit User'
+        ];
+        System.assert(!logs.isEmpty(), 'Should create a log record');
     }
 
     @IsTest
@@ -81,7 +88,8 @@ private class UserUpdateAssignmentQueueableTest {
             new List<Id>{ grpToAdd.Id },
             new List<Id>{ grpToRemove.Id },
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -115,7 +123,8 @@ private class UserUpdateAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>{ '0FK000000000001AAA' },  // packageLicensesToAdd (fake)
-            new List<Id>{ '0FK000000000002AAA' }   // packageLicensesToRemove (fake)
+            new List<Id>{ '0FK000000000002AAA' },  // packageLicensesToRemove (fake)
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -135,7 +144,8 @@ private class UserUpdateAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         );
 
         Test.startTest();

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Logs user creation and edit actions performed through uBox, including assignment outcomes.</description>
+    <label>uBox Log</label>
+    <nameField>
+        <displayFormat>LOG-{00000}</displayFormat>
+        <label>Log Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>uBox Logs</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

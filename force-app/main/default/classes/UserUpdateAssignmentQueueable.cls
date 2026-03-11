@@ -11,6 +11,7 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
     private List<Id> groupsToRemove;
     private List<Id> packageLicensesToAdd;
     private List<Id> packageLicensesToRemove;
+    private Id performedById;
 
     public UserUpdateAssignmentQueueable(
         Id userId,
@@ -23,7 +24,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
         List<Id> groupsToAdd,
         List<Id> groupsToRemove,
         List<Id> packageLicensesToAdd,
-        List<Id> packageLicensesToRemove
+        List<Id> packageLicensesToRemove,
+        Id performedById
     ) {
         this.userId = userId;
         this.permSetsToAdd = permSetsToAdd;
@@ -36,10 +38,12 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
         this.groupsToRemove = groupsToRemove;
         this.packageLicensesToAdd = packageLicensesToAdd;
         this.packageLicensesToRemove = packageLicensesToRemove;
+        this.performedById = performedById;
     }
 
     public void execute(QueueableContext context) {
         List<String> errors = new List<String>();
+        Integer successCount = 0;
 
         // --- Removals ---
 
@@ -55,6 +59,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Remove Permission Set: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -70,6 +76,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Remove Permission Set Group: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -85,6 +93,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Remove Permission Set License: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -100,6 +110,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Remove Group: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -115,6 +127,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Remove Package License: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -134,6 +148,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -151,6 +167,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set Group: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -168,6 +186,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set License: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -185,6 +205,8 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Group: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
@@ -202,15 +224,23 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Package License: ' + e.getMessage());
                     }
+                } else {
+                    successCount++;
                 }
             }
         }
 
+        String status = errors.isEmpty() ? 'Success' : 'Partial Success';
+        String detail = 'Assignment changes completed: ' + successCount + '.';
         if (!errors.isEmpty()) {
+            detail += ' Errors: ' + String.join(errors, '; ');
             System.debug(LoggingLevel.ERROR,
                 'UserUpdateAssignmentQueueable errors for User ' + userId + ': ' +
                 String.join(errors, '; ')
             );
         }
+
+        Id logId = uBoxLogService.createLog('Edit User', userId, performedById, status, detail);
+        uBoxLogService.sendCompletionNotification(performedById, userId, 'Edit User', status, detail, logId);
     }
 }

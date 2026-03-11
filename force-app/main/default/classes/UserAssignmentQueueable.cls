@@ -6,6 +6,7 @@ public without sharing class UserAssignmentQueueable implements Queueable {
     private List<Id> packageLicenseIds;
     private List<Id> permSetLicenseIds;
     private List<Id> permSetGroupIds;
+    private Id performedById;
 
     public UserAssignmentQueueable(
         Id userId,
@@ -13,7 +14,8 @@ public without sharing class UserAssignmentQueueable implements Queueable {
         List<Id> groupIds,
         List<Id> packageLicenseIds,
         List<Id> permSetLicenseIds,
-        List<Id> permSetGroupIds
+        List<Id> permSetGroupIds,
+        Id performedById
     ) {
         this.userId = userId;
         this.permissionSetIds = permissionSetIds;
@@ -21,10 +23,12 @@ public without sharing class UserAssignmentQueueable implements Queueable {
         this.packageLicenseIds = packageLicenseIds;
         this.permSetLicenseIds = permSetLicenseIds;
         this.permSetGroupIds = permSetGroupIds;
+        this.performedById = performedById;
     }
 
     public void execute(QueueableContext context) {
         List<String> errors = new List<String>();
+        List<String> successes = new List<String>();
 
         if (!permissionSetIds.isEmpty()) {
             List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>();
@@ -39,6 +43,8 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set: ' + e.getMessage());
                     }
+                } else {
+                    successes.add('Permission Set assigned');
                 }
             }
         }
@@ -56,6 +62,8 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set License: ' + e.getMessage());
                     }
+                } else {
+                    successes.add('Permission Set License assigned');
                 }
             }
         }
@@ -73,6 +81,8 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Group: ' + e.getMessage());
                     }
+                } else {
+                    successes.add('Group member added');
                 }
             }
         }
@@ -90,6 +100,8 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Package License: ' + e.getMessage());
                     }
+                } else {
+                    successes.add('Package License assigned');
                 }
             }
         }
@@ -107,15 +119,23 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     for (Database.Error e : r.getErrors()) {
                         errors.add('Permission Set Group: ' + e.getMessage());
                     }
+                } else {
+                    successes.add('Permission Set Group assigned');
                 }
             }
         }
 
+        String status = errors.isEmpty() ? 'Success' : 'Partial Success';
+        String detail = 'Assignments completed: ' + successes.size() + '.';
         if (!errors.isEmpty()) {
+            detail += ' Errors: ' + String.join(errors, '; ');
             System.debug(LoggingLevel.ERROR,
                 'UserAssignmentQueueable errors for User ' + userId + ': ' +
                 String.join(errors, '; ')
             );
         }
+
+        Id logId = uBoxLogService.createLog('Create User', userId, performedById, status, detail);
+        uBoxLogService.sendCompletionNotification(performedById, userId, 'Create User', status, detail, logId);
     }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomNotificationType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customNotifTypeName>uBox_Assignment_Complete</customNotifTypeName>
+    <description>Notifies the admin when user assignment processing completes</description>
+    <desktop>true</desktop>
+    <masterLabel>uBox Assignment Complete</masterLabel>
+    <mobile>true</mobile>
+    <slack>false</slack>
+</CustomNotificationType>

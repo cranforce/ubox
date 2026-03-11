@@ -34,7 +34,8 @@ private class UserAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -43,6 +44,12 @@ private class UserAssignmentQueueableTest {
             WHERE AssigneeId = :testUser.Id AND PermissionSetId = :ps.Id
         ];
         System.assertEquals(1, psas.size(), 'Permission set should be assigned');
+
+        List<uBox_Log__c> logs = [
+            SELECT Status__c FROM uBox_Log__c
+            WHERE Target_User__c = :testUser.Id AND Action__c = 'Create User'
+        ];
+        System.assert(!logs.isEmpty(), 'Should create a log record');
     }
 
     @IsTest
@@ -59,7 +66,8 @@ private class UserAssignmentQueueableTest {
             new List<Id>{ testGroup.Id },
             new List<Id>(),
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -107,7 +115,8 @@ private class UserAssignmentQueueableTest {
             new List<Id>(),
             pkgLicIds,
             pslIds,
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -138,7 +147,8 @@ private class UserAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>(),
-            psgIds
+            psgIds,
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
@@ -156,7 +166,8 @@ private class UserAssignmentQueueableTest {
             new List<Id>(),
             new List<Id>(),
             new List<Id>(),
-            new List<Id>()
+            new List<Id>(),
+            UserInfo.getUserId()
         ));
         Test.stopTest();
 
