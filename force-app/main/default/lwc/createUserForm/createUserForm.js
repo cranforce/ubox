@@ -239,7 +239,20 @@ export default class CreateUserForm extends NavigationMixin(LightningElement) {
 
     extractErrorMessage(error) {
         if (error?.body?.message) return error.body.message;
+        if (error?.body?.output?.errors?.length) {
+            return error.body.output.errors.map(e => e.message).join('; ');
+        }
+        if (error?.body?.pageErrors?.length) {
+            return error.body.pageErrors.map(e => e.message).join('; ');
+        }
+        if (error?.body?.fieldErrors) {
+            const msgs = Object.values(error.body.fieldErrors)
+                .flat()
+                .map(e => e.message);
+            if (msgs.length) return msgs.join('; ');
+        }
         if (error?.message) return error.message;
-        return 'An unexpected error occurred.';
+        if (typeof error === 'string') return error;
+        return JSON.stringify(error);
     }
 }
