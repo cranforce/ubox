@@ -10,6 +10,7 @@
       "path": "force-app",
       "default": true,
       "package": "uBox",
+      "ancestorVersion": "0.1.0.LATEST",
       "versionDescription": "Managed 2GP package for streamlined user creation and editing with permission and license assignment"
     },
     {
