@@ -292,7 +292,7 @@ public with sharing class UserManagementController {
         try {
             insert newUser;
         } catch (DmlException e) {
-            uBoxLogService.createLog('Create User', null, UserInfo.getUserId(), 'Error', e.getDmlMessage(0));
+            uBoxLogService.createLogAsync('Create User', null, UserInfo.getUserId(), 'Error', e.getDmlMessage(0), false);
             throw new AuraHandledException(e.getDmlMessage(0));
         }
 
@@ -311,7 +311,7 @@ public with sharing class UserManagementController {
             'permSetLicenses' => permSetLicenseIds != null ? permSetLicenseIds.size() : 0,
             'permSetGroups' => permSetGroupIds != null ? permSetGroupIds.size() : 0
         });
-        uBoxLogService.createLog('Create User', newUser.Id, UserInfo.getUserId(), 'Success', detailJson);
+        uBoxLogService.createLogAsync('Create User', newUser.Id, UserInfo.getUserId(), 'Success', detailJson, false);
 
         Boolean hasAssignments = assignmentCount > 0;
 
@@ -478,7 +478,7 @@ public with sharing class UserManagementController {
         try {
             update existingUser;
         } catch (DmlException e) {
-            uBoxLogService.createLog('Edit User', userId, UserInfo.getUserId(), 'Error', e.getDmlMessage(0));
+            uBoxLogService.createLogAsync('Edit User', userId, UserInfo.getUserId(), 'Error', e.getDmlMessage(0), false);
             throw new AuraHandledException(e.getDmlMessage(0));
         }
 
@@ -490,7 +490,7 @@ public with sharing class UserManagementController {
             'groups' => groupIds != null ? groupIds.size() : 0,
             'packageLicenses' => packageLicenseIds != null ? packageLicenseIds.size() : 0
         });
-        uBoxLogService.createLog('Edit User', userId, UserInfo.getUserId(), 'Success', editDetailJson);
+        uBoxLogService.createLogAsync('Edit User', userId, UserInfo.getUserId(), 'Success', editDetailJson, false);
 
         // Compute diffs for assignments
         if (permissionSetIds == null) permissionSetIds = new List<Id>();
