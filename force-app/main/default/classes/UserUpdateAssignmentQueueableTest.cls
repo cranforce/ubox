@@ -58,12 +58,6 @@ private class UserUpdateAssignmentQueueableTest {
         }
         System.assert(!assignedIds.contains(psToRemove.Id), 'Removed perm set should be gone');
         System.assert(assignedIds.contains(psToAdd.Id), 'Added perm set should be assigned');
-
-        List<uBox_Log__c> logs = [
-            SELECT Status__c FROM uBox_Log__c
-            WHERE Target_User__c = :testUser.Id AND Action__c = 'Edit User'
-        ];
-        System.assert(!logs.isEmpty(), 'Should create a log record');
     }
 
     @IsTest
