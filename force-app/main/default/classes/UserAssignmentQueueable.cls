@@ -135,7 +135,6 @@ public without sharing class UserAssignmentQueueable implements Queueable {
             );
         }
 
-        Id logId = uBoxLogService.createLog('Create User', userId, performedById, status, detail);
-        uBoxLogService.sendCompletionNotification(performedById, userId, 'Create User', status, detail, logId);
+        uBoxLogService.createLogAsync('Create User', userId, performedById, status, detail, true);
     }
 }

@@ -12,6 +12,22 @@ public without sharing class uBoxLogService {
         return log.Id;
     }
 
+    @future
+    public static void createLogAsync(String action, Id targetUserId, Id performedById, String status, String detail, Boolean sendNotification) {
+        uBox_Log__c log = new uBox_Log__c(
+            Action__c = action,
+            Target_User__c = targetUserId,
+            Performed_By__c = performedById,
+            Status__c = status,
+            Detail__c = detail
+        );
+        insert log;
+
+        if (sendNotification && performedById != null) {
+            sendCompletionNotification(performedById, targetUserId, action, status, detail, log.Id);
+        }
+    }
+
     public static void sendCompletionNotification(Id recipientId, Id targetUserId, String action, String status, String detail, Id logRecordId) {
         try {
             CustomNotificationType notifType = [

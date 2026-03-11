@@ -79,4 +79,28 @@ private class uBoxLogServiceTest {
         // If we got here without exception, the graceful error handling works
         System.assert(true, 'Notification method should not throw');
     }
+
+    @IsTest
+    static void testCreateLogAsync() {
+        Id currentUserId = UserInfo.getUserId();
+
+        Test.startTest();
+        uBoxLogService.createLogAsync(
+            'Create User',
+            currentUserId,
+            currentUserId,
+            'Success',
+            'Async log test',
+            false
+        );
+        Test.stopTest();
+
+        List<uBox_Log__c> logs = [
+            SELECT Action__c, Status__c, Detail__c
+            FROM uBox_Log__c
+            WHERE Performed_By__c = :currentUserId
+        ];
+        System.assert(!logs.isEmpty(), 'Should create a log record asynchronously');
+        System.assertEquals('Success', logs[0].Status__c);
+    }
 }

@@ -134,16 +134,15 @@
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="slds-var-p-around_medium slds-border_top slds-var-m-top_medium">
-                <lightning-button
-                    variant="brand"
-                    label="Create User"
-                    onclick={handleCreate}
-                    disabled={isSubmitting}
-                    class="slds-float_right"
-                ></lightning-button>
-            </div>
         </template>
+
+        <div slot="footer">
+            <lightning-button
+                variant="brand"
+                label="Create User"
+                onclick={handleCreate}
+                disabled={isSubmitting}
+            ></lightning-button>
+        </div>
     </lightning-card>
 </template>

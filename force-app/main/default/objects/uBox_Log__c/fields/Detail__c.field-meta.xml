@@ -4,6 +4,7 @@
     <description>JSON or human-readable summary of what was assigned/removed and any errors</description>
     <label>Detail</label>
     <length>32000</length>
+    <trackTrending>false</trackTrending>
     <type>LongTextArea</type>
     <visibleLines>6</visibleLines>
 </CustomField>

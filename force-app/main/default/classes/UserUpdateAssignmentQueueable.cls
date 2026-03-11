@@ -240,7 +240,6 @@ public without sharing class UserUpdateAssignmentQueueable implements Queueable 
             );
         }
 
-        Id logId = uBoxLogService.createLog('Edit User', userId, performedById, status, detail);
-        uBoxLogService.sendCompletionNotification(performedById, userId, 'Edit User', status, detail, logId);
+        uBoxLogService.createLogAsync('Edit User', userId, performedById, status, detail, true);
     }
 }
