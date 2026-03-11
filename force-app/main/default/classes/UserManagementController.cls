@@ -73,6 +73,7 @@ public with sharing class UserManagementController {
             SELECT Id, Label
             FROM PermissionSet
             WHERE IsOwnedByProfile = false
+              AND PermissionSetGroupId = null
             ORDER BY Label
         ]) {
             options.add(new Map<String, String>{ 'value' => ps.Id, 'label' => ps.Label });
