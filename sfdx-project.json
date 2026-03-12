@@ -12,14 +12,6 @@
       "package": "uBox",
       "ancestorVersion": "0.4.0.LATEST",
       "versionDescription": "Managed 2GP package for streamlined user creation and editing with permission and license assignment"
-    },
-    {
-      "versionName": "ver 0.5",
-      "versionNumber": "0.5.0.NEXT",
-      "path": "force-app",
-      "default": false,
-      "package": "uBox Unlocked",
-      "versionDescription": "Unlocked package for streamlined user creation and editing with permission and license assignment"
     }
   ],
   "packageAliases": {

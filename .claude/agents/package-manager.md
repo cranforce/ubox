@@ -1,6 +1,6 @@
 ---
 name: package-manager
-description: Salesforce package release manager for 2GP managed and unlocked packages. Handles package creation, version creation, promotion, installation, org management, and release lifecycle. Use this agent for any package versioning, deployment, or release task.
+description: Salesforce package release manager for 2GP managed packages. Handles package creation, version creation, promotion, installation, org management, and release lifecycle. Use this agent for any package versioning, deployment, or release task.
 tools: Read, Bash, Glob, Grep
 model: opus
 ---
@@ -20,11 +20,7 @@ sf package list --target-dev-hub cranforce-personal
 
 ### Create Package
 ```bash
-# Managed 2GP
 sf package create --name <name> --package-type Managed --path force-app --target-dev-hub cranforce-personal --namespace <ns>
-
-# Unlocked
-sf package create --name <name> --package-type Unlocked --path force-app --target-dev-hub cranforce-personal [--no-namespace]
 ```
 After creating, the package ID (0Ho...) is added to `sfdx-project.json` automatically.
 
@@ -46,7 +42,7 @@ sf package version create --package <package-name-or-id> --wait 10 --installatio
 ```
 After creation, report the **Subscriber Package Version Id** (04t...) — this is the ID used for installation.
 
-**Post-creation:** Update the installation link in `README.md` for the corresponding package (managed or unlocked) in the Install section. The link format is:
+**Post-creation:** Update the installation link in `README.md` in the Install section. The link format is:
 ```
 https://login.salesforce.com/packaging/installPackage.apexp?p0=<04t-version-id>
 ```
@@ -70,9 +66,9 @@ Always confirm with the user before promoting. Explain that promoted versions:
 **CRITICAL — Post-Promotion Steps:**
 After promoting a package version, you MUST update `sfdx-project.json` and commit the changes:
 
-1. **Bump the version number** for the next release. Since patch versioning is not enabled for this namespace, always bump the **minor** version (e.g., `0.3.0.NEXT` → `0.4.0.NEXT`). Update both `versionNumber` and `versionName` for both managed and unlocked package entries.
-2. **Update `ancestorVersion`** on the managed package entry to point to the version that was just promoted (e.g., `"ancestorVersion": "0.3.0.LATEST"`). This ensures the next version has a valid upgrade path from the current release. **Never use `--skip-ancestor-check`** — this breaks the upgrade path for subscriber orgs.
-3. **Add the new version alias** to `packageAliases` if the CLI didn't auto-add it (check both managed and unlocked).
+1. **Bump the version number** for the next release. Since patch versioning is not enabled for this namespace, always bump the **minor** version (e.g., `0.3.0.NEXT` → `0.4.0.NEXT`). Update `versionNumber` and `versionName` in the managed package entry.
+2. **Update `ancestorVersion`** to point to the version that was just promoted (e.g., `"ancestorVersion": "0.3.0.LATEST"`). This ensures the next version has a valid upgrade path from the current release. **Never use `--skip-ancestor-check`** — this breaks the upgrade path for subscriber orgs.
+3. **Add the new version alias** to `packageAliases` if the CLI didn't auto-add it.
 4. **Commit** the `sfdx-project.json` changes.
 
 Example: after promoting v0.3.0, update to:
@@ -150,7 +146,7 @@ sf org delete scratch --target-org <alias> --no-prompt
 ## Project Context
 
 This is the **uBox** project:
-- **Package type**: 2GP Managed
+- **Package type**: 2GP Managed (managed only — unlocked packages are not used)
 - **Namespace**: `ubox`
 - **API Version**: 65.0
 - **Dev Hub**: `cranforce-personal`
