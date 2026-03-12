@@ -30,25 +30,7 @@ public without sharing class UserAssignmentQueueable implements Queueable {
         List<String> errors = new List<String>();
         List<String> successes = new List<String>();
 
-        if (!permissionSetIds.isEmpty()) {
-            List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>();
-            for (Id psId : permissionSetIds) {
-                psas.add(new PermissionSetAssignment(
-                    AssigneeId = userId,
-                    PermissionSetId = psId
-                ));
-            }
-            for (Database.SaveResult r : Database.insert(psas, false)) {
-                if (!r.isSuccess()) {
-                    for (Database.Error e : r.getErrors()) {
-                        errors.add('Permission Set: ' + e.getMessage());
-                    }
-                } else {
-                    successes.add('Permission Set assigned');
-                }
-            }
-        }
-
+        // 1. Permission Set Licenses first — required by some permission sets
         if (!permSetLicenseIds.isEmpty()) {
             List<PermissionSetLicenseAssign> pslas = new List<PermissionSetLicenseAssign>();
             for (Id pslId : permSetLicenseIds) {
@@ -68,25 +50,7 @@ public without sharing class UserAssignmentQueueable implements Queueable {
             }
         }
 
-        if (!groupIds.isEmpty()) {
-            List<GroupMember> gms = new List<GroupMember>();
-            for (Id gId : groupIds) {
-                gms.add(new GroupMember(
-                    UserOrGroupId = userId,
-                    GroupId = gId
-                ));
-            }
-            for (Database.SaveResult r : Database.insert(gms, false)) {
-                if (!r.isSuccess()) {
-                    for (Database.Error e : r.getErrors()) {
-                        errors.add('Group: ' + e.getMessage());
-                    }
-                } else {
-                    successes.add('Group member added');
-                }
-            }
-        }
-
+        // 2. Package Licenses — may also be prerequisites
         if (!packageLicenseIds.isEmpty()) {
             List<UserPackageLicense> upls = new List<UserPackageLicense>();
             for (Id plId : packageLicenseIds) {
@@ -106,6 +70,7 @@ public without sharing class UserAssignmentQueueable implements Queueable {
             }
         }
 
+        // 3. Permission Set Groups — may contain permission sets needing licenses
         if (!permSetGroupIds.isEmpty()) {
             List<PermissionSetAssignment> psgAs = new List<PermissionSetAssignment>();
             for (Id psgId : permSetGroupIds) {
@@ -121,6 +86,46 @@ public without sharing class UserAssignmentQueueable implements Queueable {
                     }
                 } else {
                     successes.add('Permission Set Group assigned');
+                }
+            }
+        }
+
+        // 4. Permission Sets — depend on licenses being assigned first
+        if (!permissionSetIds.isEmpty()) {
+            List<PermissionSetAssignment> psas = new List<PermissionSetAssignment>();
+            for (Id psId : permissionSetIds) {
+                psas.add(new PermissionSetAssignment(
+                    AssigneeId = userId,
+                    PermissionSetId = psId
+                ));
+            }
+            for (Database.SaveResult r : Database.insert(psas, false)) {
+                if (!r.isSuccess()) {
+                    for (Database.Error e : r.getErrors()) {
+                        errors.add('Permission Set: ' + e.getMessage());
+                    }
+                } else {
+                    successes.add('Permission Set assigned');
+                }
+            }
+        }
+
+        // 5. Groups — no dependencies
+        if (!groupIds.isEmpty()) {
+            List<GroupMember> gms = new List<GroupMember>();
+            for (Id gId : groupIds) {
+                gms.add(new GroupMember(
+                    UserOrGroupId = userId,
+                    GroupId = gId
+                ));
+            }
+            for (Database.SaveResult r : Database.insert(gms, false)) {
+                if (!r.isSuccess()) {
+                    for (Database.Error e : r.getErrors()) {
+                        errors.add('Group: ' + e.getMessage());
+                    }
+                } else {
+                    successes.add('Group member added');
                 }
             }
         }
