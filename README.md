@@ -5,10 +5,10 @@ A Salesforce 2GP managed package that replaces the standard "New User" flow with
 ## Install
 
 **Managed Package (recommended):**
-[Install uBox v0.1.0.2](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000G885AAC)
+[Install uBox v0.4.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000GDCbAAO)
 
 **Unlocked Package:**
-[Install uBox Unlocked v0.1.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000G6r3AAC)
+[Install uBox Unlocked v0.4.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000GDHRAA4)
 
 > For sandbox installations, replace `login.salesforce.com` with `test.salesforce.com` in the URL.
 
