@@ -5,6 +5,10 @@
         <visible>true</visible>
     </applicationVisibilities>
     <classAccesses>
+        <apexClass>PermissionSetExplorerController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>UserAssignmentQueueable</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -64,6 +68,10 @@
     </tabSettings>
     <tabSettings>
         <tab>Edit_User</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Permission_Set_Explorer</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>

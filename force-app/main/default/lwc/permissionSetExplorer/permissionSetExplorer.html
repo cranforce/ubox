@@ -1,0 +1,52 @@
+<template>
+    <lightning-card title="Permission Set Explorer" icon-name="standard:user_role">
+        <lightning-button
+            slot="actions"
+            label="Open in Setup"
+            icon-name="utility:new_window"
+            icon-position="right"
+            disabled={isOpenInSetupDisabled}
+            onclick={handleOpenInSetup}
+        ></lightning-button>
+
+        <template lwc:if={isLoading}>
+            <div class="slds-is-relative slds-var-p-around_large">
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:else>
+            <div class="slds-grid slds-gutters">
+                <!-- Left: list -->
+                <div class="slds-col slds-size_1-of-3 ps-explorer-left">
+                    <c-permission-set-list
+                        permission-sets={permissionSets}
+                        selected-id={selectedId}
+                        onselect={handleSelect}
+                    ></c-permission-set-list>
+                </div>
+
+                <!-- Right: detail -->
+                <div class="slds-col slds-size_2-of-3 ps-explorer-right">
+                    <template lwc:if={selectedId}>
+                        <c-permission-set-detail
+                            permission-set-id={selectedId}
+                            permission-set-type={selectedType}
+                            onmemberselect={handleMemberSelect}
+                        ></c-permission-set-detail>
+                    </template>
+                    <template lwc:else>
+                        <div class="slds-illustration slds-illustration_small slds-var-p-around_large slds-text-align_center">
+                            <h3 class="slds-text-heading_medium slds-var-p-top_medium">
+                                Select a permission set or group to view its details
+                            </h3>
+                            <p class="slds-text-body_regular slds-text-color_weak">
+                                Pick one from the list on the left to see object settings, tabs, apps, custom permissions, system permissions, members, and assigned users.
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </lightning-card>
+</template>

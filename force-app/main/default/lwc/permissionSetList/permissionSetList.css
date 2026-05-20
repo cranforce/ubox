@@ -1,0 +1,30 @@
+.ps-list {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ps-item {
+    padding: 0;
+}
+
+.ps-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    border-left: 3px solid transparent;
+}
+
+.ps-link:hover {
+    background-color: #f3f3f3;
+    text-decoration: none;
+}
+
+.ps-item_selected .ps-link {
+    background-color: #ecf5fe;
+    border-left-color: #0070d2;
+}
+
+.ps-label {
+    font-weight: 600;
+}

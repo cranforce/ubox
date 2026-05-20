@@ -1,0 +1,257 @@
+<template>
+    <template lwc:if={isLoading}>
+        <div class="slds-is-relative slds-var-p-around_large">
+            <lightning-spinner alternative-text="Loading detail" size="medium"></lightning-spinner>
+        </div>
+    </template>
+
+    <template lwc:if={hasDetail}>
+        <div class="slds-var-p-around_medium">
+            <!-- Header -->
+            <div class="slds-box slds-theme_shade slds-var-m-bottom_medium">
+                <div class="slds-grid slds-grid_vertical-align-center">
+                    <h2 class="slds-text-heading_medium slds-grow">{header.label}</h2>
+                    <template lwc:if={isGroup}>
+                        <lightning-badge label="Group" class="slds-theme_info"></lightning-badge>
+                    </template>
+                    <template lwc:if={hasHeaderStatus}>
+                        <lightning-badge
+                            label={headerStatus}
+                            variant={headerStatusVariant}
+                            class="slds-var-m-left_x-small"
+                        ></lightning-badge>
+                    </template>
+                </div>
+                <p class="slds-text-body_small slds-text-color_weak">
+                    <template lwc:if={header.namespacePrefix}>
+                        {header.namespacePrefix}.{header.name}
+                    </template>
+                    <template lwc:else>
+                        {header.name}
+                    </template>
+                    <template lwc:if={header.licenseName}>
+                        &nbsp;&middot; License: {header.licenseName}
+                    </template>
+                </p>
+                <template lwc:if={header.description}>
+                    <p class="slds-var-p-top_x-small">{header.description}</p>
+                </template>
+            </div>
+
+            <lightning-accordion allow-multiple-sections-open active-section-name={activeSections}>
+                <!-- Members (groups only) -->
+                <template lwc:if={isGroup}>
+                    <lightning-accordion-section name="members" label={membersCountLabel}>
+                        <template lwc:if={hasMembers}>
+                            <ul class="slds-list_dotted slds-var-p-left_medium">
+                                <template for:each={members} for:item="m">
+                                    <li key={m.id} class="slds-var-p-bottom_x-small">
+                                        <a
+                                            href="#"
+                                            data-id={m.id}
+                                            onclick={handleMemberClick}
+                                        >
+                                            <strong>{m.label}</strong>
+                                        </a>
+                                        <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                            <template lwc:if={m.namespacePrefix}>
+                                                ({m.namespacePrefix}.{m.name})
+                                            </template>
+                                            <template lwc:else>
+                                                ({m.name})
+                                            </template>
+                                        </span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template lwc:else>
+                            <p class="slds-var-p-around_small slds-text-color_weak">
+                                This group has no member permission sets.
+                            </p>
+                        </template>
+                    </lightning-accordion-section>
+                </template>
+
+                <!-- Object Settings -->
+                <lightning-accordion-section name="objects" label={objectCountLabel}>
+                    <template lwc:if={hasObjectPermissions}>
+                        <lightning-datatable
+                            key-field="apiName"
+                            data={objectPermissions}
+                            columns={objectColumns}
+                            hide-checkbox-column
+                            resize-column-disabled
+                        ></lightning-datatable>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">
+                            No object permissions granted.
+                        </p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Tabs -->
+                <lightning-accordion-section name="tabs" label={tabCountLabel}>
+                    <template lwc:if={hasTabSettings}>
+                        <ul class="slds-list_dotted slds-var-p-left_medium">
+                            <template for:each={tabSettings} for:item="tab">
+                                <li key={tab.apiName} class="slds-var-p-bottom_x-small">
+                                    <strong>{tab.label}</strong>
+                                    <lightning-badge label={tab.visibility} class="slds-var-m-left_x-small"></lightning-badge>
+                                    <div class="slds-text-body_small slds-text-color_weak">
+                                        {tab.apiName}
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">
+                            No tab settings.
+                        </p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Apps -->
+                <lightning-accordion-section name="apps" label={appCountLabel}>
+                    <template lwc:if={hasAppAccesses}>
+                        <ul class="slds-list_dotted slds-var-p-left_medium">
+                            <template for:each={appAccesses} for:item="app">
+                                <li key={app.name}>
+                                    <strong>{app.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                        <template lwc:if={app.namespacePrefix}>
+                                            ({app.namespacePrefix}.{app.name})
+                                        </template>
+                                        <template lwc:else>
+                                            ({app.name})
+                                        </template>
+                                    </span>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">
+                            No app access granted.
+                        </p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Custom Permissions -->
+                <lightning-accordion-section name="customPerms" label={customPermCountLabel}>
+                    <template lwc:if={hasCustomPermissions}>
+                        <ul class="slds-list_dotted slds-var-p-left_medium">
+                            <template for:each={customPermissions} for:item="cp">
+                                <li key={cp.developerName} class="slds-var-p-bottom_x-small">
+                                    <strong>{cp.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                        <template lwc:if={cp.namespacePrefix}>
+                                            ({cp.namespacePrefix}.{cp.developerName})
+                                        </template>
+                                        <template lwc:else>
+                                            ({cp.developerName})
+                                        </template>
+                                    </span>
+                                    <template lwc:if={cp.description}>
+                                        <div class="slds-text-body_small slds-text-color_weak">
+                                            {cp.description}
+                                        </div>
+                                    </template>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">
+                            No custom permissions granted.
+                        </p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- System / User Permissions -->
+                <lightning-accordion-section name="userPerms" label={userPermCountLabel}>
+                    <template lwc:if={hasUserPermissions}>
+                        <div class="slds-grid slds-wrap slds-gutters_x-small">
+                            <template for:each={userPermissions} for:item="up">
+                                <div key={up.apiName} class="slds-col slds-size_1-of-2 slds-var-p-bottom_x-small">
+                                    <lightning-icon
+                                        icon-name="utility:check"
+                                        size="xx-small"
+                                        variant="success"
+                                        class="slds-var-m-right_x-small"
+                                    ></lightning-icon>
+                                    <span title={up.apiName}>{up.label}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">
+                            No system permissions enabled.
+                        </p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Assignment -->
+                <lightning-accordion-section name="assignment" label="Assignment">
+                    <div class="slds-var-p-around_small">
+                        <h3 class="slds-text-heading_small slds-var-p-bottom_x-small">Assign to users</h3>
+                        <div class="slds-grid slds-gutters slds-grid_vertical-align-end">
+                            <div class="slds-col slds-grow">
+                                <lightning-record-picker
+                                    label="Add user"
+                                    placeholder="Search users..."
+                                    object-api-name="User"
+                                    filter={assignmentFilter}
+                                    onchange={handleUserSelect}
+                                ></lightning-record-picker>
+                            </div>
+                            <div class="slds-col slds-no-flex">
+                                <lightning-button
+                                    variant="brand"
+                                    label={assignButtonLabel}
+                                    onclick={handleAssign}
+                                    disabled={assignDisabled}
+                                ></lightning-button>
+                            </div>
+                        </div>
+
+                        <template lwc:if={hasPendingUsers}>
+                            <div class="slds-var-p-top_small">
+                                <p class="slds-text-body_small slds-var-p-bottom_xx-small">
+                                    Pending assignment:
+                                </p>
+                                <lightning-pill-container
+                                    items={pendingUserPills}
+                                    onitemremove={handleRemovePending}
+                                ></lightning-pill-container>
+                            </div>
+                        </template>
+
+                        <div class="slds-var-p-top_medium">
+                            <h3 class="slds-text-heading_small slds-var-p-bottom_x-small">
+                                {assignedCountLabel}
+                            </h3>
+                            <template lwc:if={hasAssignedUsers}>
+                                <lightning-datatable
+                                    key-field="assignmentId"
+                                    data={assignedUsers}
+                                    columns={assignedColumns}
+                                    hide-checkbox-column
+                                    onrowaction={handleRowAction}
+                                ></lightning-datatable>
+                            </template>
+                            <template lwc:else>
+                                <p class="slds-text-color_weak">
+                                    {noAssignmentsLabel}
+                                </p>
+                            </template>
+                        </div>
+                    </div>
+                </lightning-accordion-section>
+            </lightning-accordion>
+        </div>
+    </template>
+</template>
