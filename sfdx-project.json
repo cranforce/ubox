@@ -11,7 +11,7 @@
       "default": true,
       "package": "uBox",
       "ancestorVersion": "0.5.0.LATEST",
-      "versionDescription": "Managed 2GP package for streamlined user creation and editing with permission and license assignment"
+      "versionDescription": "Adds Permission Set Explorer: a single-page LWC app that lists Permission Sets and Permission Set Groups with type badges, showing aggregated permissions, member sets, and assigned users. Supports assigning/unassigning users and opening either type in Setup. Includes new uBox_Log Action picklist values for Permission Set Group assignments."
     }
   ],
   "packageAliases": {
@@ -28,6 +28,7 @@
     "uBox Unlocked@0.3.0-1": "04tfj000000GBp7AAG",
     "uBox@0.4.0-1": "04tfj000000GDCbAAO",
     "uBox Unlocked@0.4.0-1": "04tfj000000GDHRAA4",
-    "uBox@0.5.0-1": "04tfj000000GFcbAAG"
+    "uBox@0.5.0-1": "04tfj000000GFcbAAG",
+    "uBox@0.6.0-1": "04tfj000000JEs5AAG"
   }
 }
