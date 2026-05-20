@@ -5,13 +5,13 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "versionName": "ver 0.6",
-      "versionNumber": "0.6.0.NEXT",
+      "versionName": "ver 0.7",
+      "versionNumber": "0.7.0.NEXT",
       "path": "force-app",
       "default": true,
       "package": "uBox",
-      "ancestorVersion": "0.5.0.LATEST",
-      "versionDescription": "Adds Permission Set Explorer: a single-page LWC app that lists Permission Sets and Permission Set Groups with type badges, showing aggregated permissions, member sets, and assigned users. Supports assigning/unassigning users and opening either type in Setup. Includes new uBox_Log Action picklist values for Permission Set Group assignments."
+      "ancestorVersion": "0.6.0.LATEST",
+      "versionDescription": ""
     }
   ],
   "packageAliases": {
