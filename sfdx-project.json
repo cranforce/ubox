@@ -11,7 +11,7 @@
       "default": true,
       "package": "uBox",
       "ancestorVersion": "0.6.0.LATEST",
-      "versionDescription": ""
+      "versionDescription": "Refactor Edit User into a 2-pane experience with new userList and userPermissionInspector LWCs for browsing users and inspecting their permission assignments."
     }
   ],
   "packageAliases": {
@@ -29,6 +29,7 @@
     "uBox@0.4.0-1": "04tfj000000GDCbAAO",
     "uBox Unlocked@0.4.0-1": "04tfj000000GDHRAA4",
     "uBox@0.5.0-1": "04tfj000000GFcbAAG",
-    "uBox@0.6.0-1": "04tfj000000JEs5AAG"
+    "uBox@0.6.0-1": "04tfj000000JEs5AAG",
+    "uBox@0.7.0-1": "04tfj000000JF09AAG"
   }
 }

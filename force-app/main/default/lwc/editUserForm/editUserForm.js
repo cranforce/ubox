@@ -7,6 +7,7 @@ import getAvailablePublicGroups from '@salesforce/apex/UserManagementController.
 import getAvailablePermissionSetLicenses from '@salesforce/apex/UserManagementController.getAvailablePermissionSetLicenses';
 import getAvailablePermissionSetGroups from '@salesforce/apex/UserManagementController.getAvailablePermissionSetGroups';
 import getAvailablePackageLicenses from '@salesforce/apex/UserManagementController.getAvailablePackageLicenses';
+import getAllUsers from '@salesforce/apex/UserManagementController.getAllUsers';
 import getEditUserData from '@salesforce/apex/UserManagementController.getEditUserData';
 import updateUser from '@salesforce/apex/UserManagementController.updateUser';
 
@@ -15,6 +16,9 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     hasLoaded = false;
     isSubmitting = false;
     selectedUserId = null;
+    activeTab = 'details';
+
+    allUsers = [];
 
     userData = {};
     selectedPermissionSetIds = [];
@@ -51,19 +55,25 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
         return this.packageLicenseOptions.length > 0;
     }
 
+    get selectedUserName() {
+        const u = this.allUsers.find(x => x.id === this.selectedUserId);
+        return u ? u.name : '';
+    }
+
     connectedCallback() {
         this.loadFormData();
     }
 
     async loadFormData() {
         try {
-            const [metadata, permSets, permSetGroups, permSetLicenses, groups, licenses] = await Promise.all([
+            const [metadata, permSets, permSetGroups, permSetLicenses, groups, licenses, users] = await Promise.all([
                 getUserFormMetadata(),
                 getAvailablePermissionSets(),
                 getAvailablePermissionSetGroups(),
                 getAvailablePermissionSetLicenses(),
                 getAvailablePublicGroups(),
-                getAvailablePackageLicenses()
+                getAvailablePackageLicenses(),
+                getAllUsers()
             ]);
 
             this.userLicenseOptions = metadata.userLicenseOptions;
@@ -80,6 +90,7 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
             this.permSetLicenseOptions = permSetLicenses;
             this.publicGroupOptions = groups;
             this.packageLicenseOptions = licenses;
+            this.allUsers = users;
         } catch (error) {
             this.showToast('Error', this.extractErrorMessage(error), 'error');
         } finally {
@@ -89,8 +100,8 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     }
 
     async handleUserSelected(event) {
-        const recordId = event.detail.recordId;
-        if (!recordId) {
+        const userId = event.detail.userId;
+        if (!userId) {
             this.selectedUserId = null;
             this.userData = {};
             this.selectedPermissionSetIds = [];
@@ -101,11 +112,11 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
             return;
         }
 
-        this.selectedUserId = recordId;
+        this.selectedUserId = userId;
         this.isLoading = true;
 
         try {
-            const editData = await getEditUserData({ userId: recordId });
+            const editData = await getEditUserData({ userId });
             this.userData = { ...editData.user };
             this.selectedPermissionSetIds = [...editData.permissionSetIds];
             this.selectedPermSetGroupIds = [...editData.permSetGroupIds];
@@ -127,7 +138,9 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
         window.open('/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view', '_blank');
     }
 
-    // --- Field change handlers ---
+    handleTabActive(event) {
+        this.activeTab = event.target.value;
+    }
 
     handleUserFieldChange(event) {
         const { fieldName, value } = event.detail;
@@ -175,8 +188,6 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
         this.selectedPackageLicenseIds = event.detail.value;
     }
 
-    // --- Save ---
-
     async handleSave() {
         const userInfoSection = this.template.querySelector('c-user-info-section');
         if (userInfoSection && !userInfoSection.validate()) {
@@ -207,8 +218,6 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
             this.isSubmitting = false;
         }
     }
-
-    // --- Utilities ---
 
     showToast(title, message, variant) {
         this.dispatchEvent(new ShowToastEvent({ title, message, variant }));

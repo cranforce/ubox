@@ -239,4 +239,99 @@ private class UserManagementControllerTest {
             System.assert(e.getMessage().contains('Missing required fields'), 'Should list missing fields');
         }
     }
+
+    @IsTest
+    static void testGetAllUsers() {
+        List<Map<String, Object>> users = UserManagementController.getAllUsers();
+        System.assertNotEquals(null, users, 'Should return a list');
+        System.assert(!users.isEmpty(), 'Should include at least the running user');
+
+        Boolean foundRunning = false;
+        Id runningId = UserInfo.getUserId();
+        for (Map<String, Object> row : users) {
+            if (runningId == (Id) row.get('id')) {
+                foundRunning = true;
+                System.assertNotEquals(null, row.get('name'));
+                System.assertNotEquals(null, row.get('username'));
+                System.assertNotEquals(null, row.get('isActive'));
+                break;
+            }
+        }
+        System.assert(foundRunning, 'Running user should appear in the list');
+    }
+
+    @IsTest
+    static void testGetUserEffectivePermissionsProfileOnly() {
+        Id runningId = UserInfo.getUserId();
+        Map<String, Object> result = UserManagementController.getUserEffectivePermissions(runningId);
+
+        System.assertNotEquals(null, result.get('user'), 'Should return user info');
+        System.assertNotEquals(null, result.get('sources'), 'Should return sources list');
+        System.assertNotEquals(null, result.get('userPermissions'), 'Should return user permissions');
+        System.assertNotEquals(null, result.get('objectPermissions'), 'Should return object permissions');
+        System.assertNotEquals(null, result.get('tabSettings'), 'Should return tab settings');
+        System.assertNotEquals(null, result.get('appAccesses'), 'Should return app accesses');
+        System.assertNotEquals(null, result.get('customPermissions'), 'Should return custom permissions');
+
+        List<Map<String, Object>> sources = (List<Map<String, Object>>) result.get('sources');
+        Boolean foundProfile = false;
+        for (Map<String, Object> s : sources) {
+            if ('Profile'.equals((String) s.get('type'))) { foundProfile = true; break; }
+        }
+        System.assert(foundProfile, 'Profile should appear as a source for an existing user');
+    }
+
+    @IsTest
+    static void testGetUserEffectivePermissionsWithAssignments() {
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            FirstName = 'Eff', LastName = 'PermTest',
+            Email = 'efftest@example.com',
+            Username = 'efftest' + Datetime.now().getTime() + '@example.com.ubox',
+            Alias = 'efftst', ProfileId = stdProfile.Id,
+            TimeZoneSidKey = 'America/Los_Angeles', LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US', IsActive = true
+        );
+        insert testUser;
+
+        PermissionSet ps = new PermissionSet(
+            Name = 'uBox_EffTest_PS_' + String.valueOf(Datetime.now().getTime()),
+            Label = 'uBox EffTest PS',
+            PermissionsApiEnabled = true
+        );
+        insert ps;
+        insert new ObjectPermissions(
+            ParentId = ps.Id, SobjectType = 'Account',
+            PermissionsRead = true, PermissionsCreate = true
+        );
+        insert new PermissionSetAssignment(
+            AssigneeId = testUser.Id, PermissionSetId = ps.Id
+        );
+
+        Map<String, Object> result = UserManagementController.getUserEffectivePermissions(testUser.Id);
+
+        List<Map<String, Object>> sources = (List<Map<String, Object>>) result.get('sources');
+        Boolean foundPsSource = false;
+        for (Map<String, Object> s : sources) {
+            if ('PermissionSet'.equals((String) s.get('type'))) { foundPsSource = true; break; }
+        }
+        System.assert(foundPsSource, 'PermissionSet should be listed as a source');
+
+        List<Map<String, Object>> objectPerms = (List<Map<String, Object>>) result.get('objectPermissions');
+        Boolean foundAccount = false;
+        for (Map<String, Object> op : objectPerms) {
+            if ('Account'.equals((String) op.get('apiName'))) { foundAccount = true; break; }
+        }
+        System.assert(foundAccount, 'Account object permission should appear with attribution');
+
+        List<Map<String, Object>> userPerms = (List<Map<String, Object>>) result.get('userPermissions');
+        Boolean foundApiEnabled = false;
+        for (Map<String, Object> up : userPerms) {
+            if ('PermissionsApiEnabled'.equals((String) up.get('apiName'))) {
+                foundApiEnabled = true;
+                break;
+            }
+        }
+        System.assert(foundApiEnabled, 'API Enabled system permission should appear');
+    }
 }

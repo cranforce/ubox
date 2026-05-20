@@ -1,0 +1,55 @@
+<template>
+    <div class="slds-var-p-around_small">
+        <lightning-input
+            type="search"
+            label="Search users"
+            variant="label-hidden"
+            placeholder="Search by name, username, email, profile..."
+            value={searchTerm}
+            onchange={handleSearchChange}
+        ></lightning-input>
+        <div class="slds-var-p-top_x-small">
+            <lightning-radio-group
+                label="Status filter"
+                variant="label-hidden"
+                options={statusFilters}
+                value={statusFilter}
+                type="button"
+                onchange={handleStatusChange}
+            ></lightning-radio-group>
+        </div>
+        <p class="slds-text-body_small slds-text-color_weak slds-var-p-top_x-small">
+            {resultCountLabel}
+        </p>
+    </div>
+
+    <ul class="slds-has-dividers_bottom-space ps-list">
+        <template for:each={filteredUsers} for:item="u">
+            <li key={u.id} class={u.cssClass}>
+                <a
+                    href="#"
+                    data-id={u.id}
+                    onclick={handleSelect}
+                    class="slds-truncate ps-link"
+                    title={u.name}
+                >
+                    <div class="slds-grid slds-grid_vertical-align-center slds-truncate">
+                        <div class="slds-truncate ps-label slds-grow">{u.name}</div>
+                        <lightning-badge
+                            label={u.badgeLabel}
+                            class={u.badgeClass}
+                        ></lightning-badge>
+                    </div>
+                    <div class="slds-text-body_small slds-text-color_weak slds-truncate">
+                        {u.username}
+                    </div>
+                    <template lwc:if={u.profileName}>
+                        <div class="slds-text-body_small slds-text-color_weak slds-truncate">
+                            {u.profileName}
+                        </div>
+                    </template>
+                </a>
+            </li>
+        </template>
+    </ul>
+</template>

@@ -2,3 +2,10 @@
     display: block;
 }
 
+.eu-left {
+    border-right: 1px solid #d8dde6;
+}
+
+.eu-right {
+    min-height: 60vh;
+}

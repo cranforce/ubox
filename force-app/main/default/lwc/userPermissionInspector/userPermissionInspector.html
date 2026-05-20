@@ -1,0 +1,178 @@
+<template>
+    <template lwc:if={isLoading}>
+        <div class="slds-is-relative slds-var-p-around_large">
+            <lightning-spinner alternative-text="Loading permissions" size="medium"></lightning-spinner>
+        </div>
+    </template>
+
+    <template lwc:if={hasData}>
+        <div class="slds-var-p-around_medium">
+            <!-- Sources summary -->
+            <div class="slds-box slds-theme_shade slds-var-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-var-p-bottom_x-small">
+                    Permission Sources
+                </h3>
+                <p class="slds-text-body_small slds-text-color_weak slds-var-p-bottom_x-small">
+                    Permissions below are aggregated from the user's profile, directly assigned permission sets, and permission set groups.
+                </p>
+                <div class="slds-grid slds-wrap slds-gutters_x-small">
+                    <template for:each={sourcePills} for:item="s">
+                        <span key={s.sourceId} class="slds-var-m-right_x-small slds-var-m-bottom_xx-small">
+                            <lightning-badge label={s.label} class={s.badgeClass}></lightning-badge>
+                        </span>
+                    </template>
+                </div>
+            </div>
+
+            <lightning-accordion allow-multiple-sections-open active-section-name={activeSections}>
+                <!-- Object Settings -->
+                <lightning-accordion-section name="objects" label={objectCountLabel}>
+                    <template lwc:if={hasObjectPermissions}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={objectPermissions} for:item="o">
+                                <li key={o.apiName} class="slds-var-p-around_x-small">
+                                    <div class="slds-grid slds-grid_vertical-align-center">
+                                        <div class="slds-grow">
+                                            <strong>{o.label}</strong>
+                                            <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                                ({o.apiName})
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <template for:each={o.crudBadges} for:item="b">
+                                                <span key={b.key} class={b.cssClass} title={b.title}>{b.label}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={o.grantPills} for:item="g">
+                                            <span key={g.key} class="slds-var-m-left_xx-small upi-grant">
+                                                <lightning-badge label={g.label} class={g.badgeClass}></lightning-badge>
+                                                <template lwc:if={g.detail}>
+                                                    <span class="slds-text-color_weak slds-var-m-left_xx-small">({g.detail})</span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">No object permissions granted.</p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Tab Settings -->
+                <lightning-accordion-section name="tabs" label={tabCountLabel}>
+                    <template lwc:if={hasTabSettings}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={tabSettings} for:item="t">
+                                <li key={t.apiName} class="slds-var-p-around_x-small">
+                                    <strong>{t.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">({t.apiName})</span>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={t.grantPills} for:item="g">
+                                            <span key={g.key} class="slds-var-m-left_xx-small upi-grant">
+                                                <lightning-badge label={g.label} class={g.badgeClass}></lightning-badge>
+                                                <template lwc:if={g.detail}>
+                                                    <span class="slds-text-color_weak slds-var-m-left_xx-small">({g.detail})</span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">No tab settings.</p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- App Access -->
+                <lightning-accordion-section name="apps" label={appCountLabel}>
+                    <template lwc:if={hasAppAccesses}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={appAccesses} for:item="a">
+                                <li key={a.name} class="slds-var-p-around_x-small">
+                                    <strong>{a.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                        <template lwc:if={a.namespacePrefix}>({a.namespacePrefix}.{a.name})</template>
+                                        <template lwc:else>({a.name})</template>
+                                    </span>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={a.sourcePills} for:item="s">
+                                            <span key={s.key} class="slds-var-m-left_xx-small upi-grant">
+                                                <lightning-badge label={s.label} class={s.badgeClass}></lightning-badge>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">No app access granted.</p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- Custom Permissions -->
+                <lightning-accordion-section name="customPerms" label={customPermCountLabel}>
+                    <template lwc:if={hasCustomPermissions}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={customPermissions} for:item="cp">
+                                <li key={cp.developerName} class="slds-var-p-around_x-small">
+                                    <strong>{cp.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">
+                                        <template lwc:if={cp.namespacePrefix}>({cp.namespacePrefix}.{cp.developerName})</template>
+                                        <template lwc:else>({cp.developerName})</template>
+                                    </span>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={cp.sourcePills} for:item="s">
+                                            <span key={s.key} class="slds-var-m-left_xx-small upi-grant">
+                                                <lightning-badge label={s.label} class={s.badgeClass}></lightning-badge>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">No custom permissions granted.</p>
+                    </template>
+                </lightning-accordion-section>
+
+                <!-- System Permissions -->
+                <lightning-accordion-section name="userPerms" label={userPermCountLabel}>
+                    <template lwc:if={hasUserPermissions}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={userPermissions} for:item="up">
+                                <li key={up.apiName} class="slds-var-p-around_x-small">
+                                    <strong>{up.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">({up.apiName})</span>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={up.sourcePills} for:item="s">
+                                            <span key={s.key} class="slds-var-m-left_xx-small upi-grant">
+                                                <lightning-badge label={s.label} class={s.badgeClass}></lightning-badge>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+                    <template lwc:else>
+                        <p class="slds-var-p-around_small slds-text-color_weak">No system permissions enabled.</p>
+                    </template>
+                </lightning-accordion-section>
+            </lightning-accordion>
+        </div>
+    </template>
+</template>

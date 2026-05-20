@@ -10,130 +10,142 @@
             </template>
         </div>
 
-        <!-- User Picker (always visible) -->
-        <div class="slds-var-p-around_medium slds-border_bottom">
-            <lightning-record-picker
-                label="Select a user to edit"
-                placeholder="Search users..."
-                object-api-name="User"
-                onchange={handleUserSelected}
-            ></lightning-record-picker>
-        </div>
-
         <template lwc:if={isLoading}>
-            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            <div class="slds-is-relative slds-var-p-around_large">
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </div>
         </template>
 
         <template lwc:if={hasLoaded}>
-            <template lwc:if={hasUserSelected}>
-                <div class="slds-grid slds-gutters slds-var-p-around_medium">
-                    <!-- Left: User Information -->
-                    <div class="slds-col slds-size_1-of-2">
-                        <lightning-card title="User Information" icon-name="standard:user">
-                            <c-user-info-section
-                                user-data={userData}
-                                user-license-options={userLicenseOptions}
-                                profile-options={profileOptions}
-                                role-options={roleOptions}
-                                timezone-options={timezoneOptions}
-                                locale-options={localeOptions}
-                                email-encoding-options={emailEncodingOptions}
-                                language-options={languageOptions}
-                                onuserchange={handleUserFieldChange}
-                            ></c-user-info-section>
-                        </lightning-card>
-                    </div>
-
-                    <!-- Right: Assignments -->
-                    <div class="slds-col slds-size_1-of-2">
-                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSections}>
-                            <!-- Permission Sets Section -->
-                            <lightning-accordion-section name="permSets" label="Permission Sets">
-                                <c-dual-list-section
-                                    label="Permission Sets"
-                                    source-label="Available"
-                                    selected-label="Selected"
-                                    options={permissionSetOptions}
-                                    values={selectedPermissionSetIds}
-                                    onselectionchange={handlePermSetChange}
-                                ></c-dual-list-section>
-                            </lightning-accordion-section>
-
-                            <!-- Permission Set Groups Section -->
-                            <lightning-accordion-section name="permSetGroups" label="Permission Set Groups">
-                                <c-dual-list-section
-                                    label="Permission Set Groups"
-                                    source-label="Available"
-                                    selected-label="Selected"
-                                    options={permSetGroupOptions}
-                                    values={selectedPermSetGroupIds}
-                                    onselectionchange={handlePermSetGroupChange}
-                                ></c-dual-list-section>
-                            </lightning-accordion-section>
-
-                            <!-- Permission Set Licenses Section -->
-                            <lightning-accordion-section name="permSetLicenses" label="Permission Set Licenses">
-                                <template lwc:if={hasPermSetLicenseOptions}>
-                                    <c-dual-list-section
-                                        label="Permission Set Licenses"
-                                        source-label="Available"
-                                        selected-label="Selected"
-                                        options={permSetLicenseOptions}
-                                        values={selectedPermSetLicenseIds}
-                                        onselectionchange={handlePermSetLicenseChange}
-                                    ></c-dual-list-section>
-                                </template>
-                                <template lwc:else>
-                                    <p class="slds-var-p-around_medium slds-text-color_weak">
-                                        No permission set licenses available in this org.
-                                    </p>
-                                </template>
-                            </lightning-accordion-section>
-
-                            <!-- Public Groups Section -->
-                            <lightning-accordion-section name="groups" label="Public Groups">
-                                <c-dual-list-section
-                                    label="Public Groups"
-                                    source-label="Available"
-                                    selected-label="Selected"
-                                    options={publicGroupOptions}
-                                    values={selectedGroupIds}
-                                    onselectionchange={handleGroupChange}
-                                ></c-dual-list-section>
-                            </lightning-accordion-section>
-
-                            <!-- Package Licenses Section -->
-                            <lightning-accordion-section name="licenses" label="Package Licenses">
-                                <template lwc:if={hasPackageLicenseOptions}>
-                                    <c-dual-list-section
-                                        label="Package Licenses"
-                                        source-label="Available"
-                                        selected-label="Selected"
-                                        options={packageLicenseOptions}
-                                        values={selectedPackageLicenseIds}
-                                        onselectionchange={handleLicenseChange}
-                                    ></c-dual-list-section>
-                                </template>
-                                <template lwc:else>
-                                    <p class="slds-var-p-around_medium slds-text-color_weak">
-                                        No package licenses available in this org.
-                                    </p>
-                                </template>
-                            </lightning-accordion-section>
-                        </lightning-accordion>
-                    </div>
+            <div class="slds-grid slds-gutters">
+                <!-- Left: User list -->
+                <div class="slds-col slds-size_1-of-3 eu-left">
+                    <c-user-list
+                        users={allUsers}
+                        selected-id={selectedUserId}
+                        onselect={handleUserSelected}
+                    ></c-user-list>
                 </div>
 
-            </template>
-        </template>
+                <!-- Right: detail tabs -->
+                <div class="slds-col slds-size_2-of-3 eu-right">
+                    <template lwc:if={hasUserSelected}>
+                        <lightning-tabset variant="scoped" active-tab-value={activeTab}>
+                            <lightning-tab label="Details" value="details" onactive={handleTabActive}>
+                                <div class="slds-grid slds-gutters slds-var-p-around_medium">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-card title="User Information" icon-name="standard:user">
+                                            <c-user-info-section
+                                                user-data={userData}
+                                                user-license-options={userLicenseOptions}
+                                                profile-options={profileOptions}
+                                                role-options={roleOptions}
+                                                timezone-options={timezoneOptions}
+                                                locale-options={localeOptions}
+                                                email-encoding-options={emailEncodingOptions}
+                                                language-options={languageOptions}
+                                                onuserchange={handleUserFieldChange}
+                                            ></c-user-info-section>
+                                        </lightning-card>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSections}>
+                                            <lightning-accordion-section name="permSets" label="Permission Sets">
+                                                <c-dual-list-section
+                                                    label="Permission Sets"
+                                                    source-label="Available"
+                                                    selected-label="Selected"
+                                                    options={permissionSetOptions}
+                                                    values={selectedPermissionSetIds}
+                                                    onselectionchange={handlePermSetChange}
+                                                ></c-dual-list-section>
+                                            </lightning-accordion-section>
+                                            <lightning-accordion-section name="permSetGroups" label="Permission Set Groups">
+                                                <c-dual-list-section
+                                                    label="Permission Set Groups"
+                                                    source-label="Available"
+                                                    selected-label="Selected"
+                                                    options={permSetGroupOptions}
+                                                    values={selectedPermSetGroupIds}
+                                                    onselectionchange={handlePermSetGroupChange}
+                                                ></c-dual-list-section>
+                                            </lightning-accordion-section>
+                                            <lightning-accordion-section name="permSetLicenses" label="Permission Set Licenses">
+                                                <template lwc:if={hasPermSetLicenseOptions}>
+                                                    <c-dual-list-section
+                                                        label="Permission Set Licenses"
+                                                        source-label="Available"
+                                                        selected-label="Selected"
+                                                        options={permSetLicenseOptions}
+                                                        values={selectedPermSetLicenseIds}
+                                                        onselectionchange={handlePermSetLicenseChange}
+                                                    ></c-dual-list-section>
+                                                </template>
+                                                <template lwc:else>
+                                                    <p class="slds-var-p-around_medium slds-text-color_weak">
+                                                        No permission set licenses available in this org.
+                                                    </p>
+                                                </template>
+                                            </lightning-accordion-section>
+                                            <lightning-accordion-section name="groups" label="Public Groups">
+                                                <c-dual-list-section
+                                                    label="Public Groups"
+                                                    source-label="Available"
+                                                    selected-label="Selected"
+                                                    options={publicGroupOptions}
+                                                    values={selectedGroupIds}
+                                                    onselectionchange={handleGroupChange}
+                                                ></c-dual-list-section>
+                                            </lightning-accordion-section>
+                                            <lightning-accordion-section name="licenses" label="Package Licenses">
+                                                <template lwc:if={hasPackageLicenseOptions}>
+                                                    <c-dual-list-section
+                                                        label="Package Licenses"
+                                                        source-label="Available"
+                                                        selected-label="Selected"
+                                                        options={packageLicenseOptions}
+                                                        values={selectedPackageLicenseIds}
+                                                        onselectionchange={handleLicenseChange}
+                                                    ></c-dual-list-section>
+                                                </template>
+                                                <template lwc:else>
+                                                    <p class="slds-var-p-around_medium slds-text-color_weak">
+                                                        No package licenses available in this org.
+                                                    </p>
+                                                </template>
+                                            </lightning-accordion-section>
+                                        </lightning-accordion>
+                                    </div>
+                                </div>
+                                <div class="slds-var-p-around_medium slds-text-align_right">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Save Changes"
+                                        onclick={handleSave}
+                                        disabled={isSubmitting}
+                                    ></lightning-button>
+                                </div>
+                            </lightning-tab>
 
-        <div slot="footer">
-            <lightning-button
-                variant="brand"
-                label="Save Changes"
-                onclick={handleSave}
-                disabled={isSubmitting}
-            ></lightning-button>
-        </div>
+                            <lightning-tab label="Permissions" value="permissions" onactive={handleTabActive}>
+                                <c-user-permission-inspector
+                                    user-id={selectedUserId}
+                                ></c-user-permission-inspector>
+                            </lightning-tab>
+                        </lightning-tabset>
+                    </template>
+                    <template lwc:else>
+                        <div class="slds-illustration slds-illustration_small slds-var-p-around_large slds-text-align_center">
+                            <h3 class="slds-text-heading_medium slds-var-p-top_medium">
+                                Select a user to view or edit
+                            </h3>
+                            <p class="slds-text-body_regular slds-text-color_weak">
+                                Pick a user from the list on the left. Use Details to edit, or Permissions to examine where their permissions come from.
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
     </lightning-card>
 </template>
