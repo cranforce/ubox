@@ -5,13 +5,13 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "versionName": "ver 0.7",
-      "versionNumber": "0.7.0.NEXT",
+      "versionName": "ver 0.8",
+      "versionNumber": "0.8.0.NEXT",
       "path": "force-app",
       "default": true,
       "package": "uBox",
-      "ancestorVersion": "0.6.0.LATEST",
-      "versionDescription": "Refactor Edit User into a 2-pane experience with new userList and userPermissionInspector LWCs for browsing users and inspecting their permission assignments."
+      "ancestorVersion": "0.7.0.LATEST",
+      "versionDescription": ""
     }
   ],
   "packageAliases": {
