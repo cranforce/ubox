@@ -4,6 +4,7 @@ import LightningConfirm from 'lightning/confirm';
 import getPermissionSetDetail from '@salesforce/apex/PermissionSetExplorerController.getPermissionSetDetail';
 import getPermissionSetGroupDetail from '@salesforce/apex/PermissionSetExplorerController.getPermissionSetGroupDetail';
 import getAssignedUsers from '@salesforce/apex/PermissionSetExplorerController.getAssignedUsers';
+import getFieldPermissions from '@salesforce/apex/PermissionSetExplorerController.getFieldPermissions';
 import getUsersByIds from '@salesforce/apex/PermissionSetExplorerController.getUsersByIds';
 import assignPermissionSet from '@salesforce/apex/PermissionSetExplorerController.assignPermissionSet';
 import unassignPermissionSet from '@salesforce/apex/PermissionSetExplorerController.unassignPermissionSet';
@@ -86,6 +87,9 @@ export default class PermissionSetDetail extends LightningElement {
     assignedUsers = [];
     pendingUsers = [];
     isAssigning = false;
+    flsObject;
+    flsRows = [];
+    flsLoading = false;
     activeSections = ['objects', 'tabs', 'apps', 'customPerms', 'userPerms', 'members', 'assignment'];
 
     objectColumns = OBJECT_COLUMNS;
@@ -121,6 +125,13 @@ export default class PermissionSetDetail extends LightningElement {
 
     get objectPermissions() {
         return this.detail?.objectPermissions || [];
+    }
+
+    get objectOptions() {
+        return this.objectPermissions.map(o => ({
+            label: `${o.label} (${o.apiName})`,
+            value: o.apiName
+        }));
     }
 
     get tabSettings() {
@@ -246,6 +257,8 @@ export default class PermissionSetDetail extends LightningElement {
     async loadDetail() {
         this.isLoading = true;
         this.pendingUsers = [];
+        this.flsObject = undefined;
+        this.flsRows = [];
         try {
             const detailPromise = this.isGroup
                 ? getPermissionSetGroupDetail({ permissionSetGroupId: this._permissionSetId })
@@ -263,6 +276,28 @@ export default class PermissionSetDetail extends LightningElement {
             this.showToast('Error', this.extractErrorMessage(error), 'error');
         } finally {
             this.isLoading = false;
+        }
+    }
+
+    async handleFlsObjectSelect(event) {
+        const objectApiName = event.detail.objectApiName;
+        this.flsObject = objectApiName;
+        if (!objectApiName) {
+            this.flsRows = [];
+            return;
+        }
+        this.flsLoading = true;
+        try {
+            this.flsRows = await getFieldPermissions({
+                targetId: this._permissionSetId,
+                targetType: this._permissionSetType,
+                objectApiName
+            });
+        } catch (error) {
+            this.flsRows = [];
+            this.showToast('Error', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.flsLoading = false;
         }
     }
 

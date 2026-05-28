@@ -1,6 +1,7 @@
 import { LightningElement, api } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getUserEffectivePermissions from '@salesforce/apex/UserManagementController.getUserEffectivePermissions';
+import getUserFieldPermissions from '@salesforce/apex/UserManagementController.getUserFieldPermissions';
 
 const SOURCE_BADGE_CLASS = {
     Profile: 'slds-theme_info',
@@ -28,6 +29,10 @@ export default class UserPermissionInspector extends LightningElement {
     data;
     sourceById = {};
     activeSections = ['objects', 'tabs', 'apps', 'customPerms', 'userPerms'];
+    flsObject;
+    flsRows = [];
+    flsLoading = false;
+    showFlsSources = true;
 
     get hasData() {
         return !!this.data;
@@ -59,6 +64,13 @@ export default class UserPermissionInspector extends LightningElement {
                     badgeClass: SOURCE_BADGE_CLASS[src.type] || ''
                 };
             })
+        }));
+    }
+
+    get objectOptions() {
+        return this.objectPermissions.map(o => ({
+            label: `${o.label} (${o.apiName})`,
+            value: o.apiName
         }));
     }
 
@@ -160,8 +172,56 @@ export default class UserPermissionInspector extends LightningElement {
         return parts.length ? parts.join('') : '—';
     }
 
+    async handleFlsObjectSelect(event) {
+        const objectApiName = event.detail.objectApiName;
+        this.flsObject = objectApiName;
+        if (!objectApiName) {
+            this.flsRows = [];
+            return;
+        }
+        this.flsLoading = true;
+        try {
+            const result = await getUserFieldPermissions({
+                userId: this._userId,
+                objectApiName
+            });
+            this.flsRows = (result?.fields || []).map(f => ({
+                ...f,
+                grantPills: (f.grants || []).map(g => {
+                    const src = this.sourceById[g.sourceId] || { label: g.sourceId, type: '' };
+                    return {
+                        key: g.sourceId + '|' + (g.read ? 'r' : '') + (g.edit ? 'e' : ''),
+                        label: src.label,
+                        detail: this.summarizeReadEdit(g),
+                        badgeClass: SOURCE_BADGE_CLASS[src.type] || ''
+                    };
+                })
+            }));
+        } catch (error) {
+            this.flsRows = [];
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Error loading field permissions',
+                    message: this.extractErrorMessage(error),
+                    variant: 'error'
+                })
+            );
+        } finally {
+            this.flsLoading = false;
+        }
+    }
+
+    summarizeReadEdit(g) {
+        const parts = [];
+        if (g.read) parts.push('R');
+        if (g.edit) parts.push('E');
+        return parts.length ? parts.join('') : '—';
+    }
+
     async loadDetail() {
         this.isLoading = true;
+        this.flsObject = undefined;
+        this.flsRows = [];
         try {
             const result = await getUserEffectivePermissions({ userId: this._userId });
             this.data = result;

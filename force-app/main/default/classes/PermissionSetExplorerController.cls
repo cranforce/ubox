@@ -314,6 +314,63 @@ public with sharing class PermissionSetExplorerController {
         return detail;
     }
 
+    @AuraEnabled(cacheable=true)
+    public static List<Map<String, Object>> getFieldPermissions(Id targetId, String targetType, String objectApiName) {
+        List<Map<String, Object>> results = new List<Map<String, Object>>();
+        if (targetId == null || String.isBlank(objectApiName)) {
+            return results;
+        }
+
+        // For a PSG, the field permissions live on the auto-generated aggregated
+        // PermissionSet whose PermissionSetGroupId points at the group.
+        Id parentId = targetId;
+        if (TYPE_PSG.equals(targetType)) {
+            List<PermissionSet> aggregated = [
+                SELECT Id
+                FROM PermissionSet
+                WHERE PermissionSetGroupId = :targetId
+                LIMIT 1
+            ];
+            if (aggregated.isEmpty()) {
+                return results;
+            }
+            parentId = aggregated[0].Id;
+        }
+
+        // Resolve field labels via describe (best-effort).
+        Map<String, Schema.SObjectField> fieldDescribe = null;
+        Schema.SObjectType sobjType = Schema.getGlobalDescribe().get(objectApiName);
+        if (sobjType != null) {
+            fieldDescribe = sobjType.getDescribe().fields.getMap();
+        }
+
+        for (FieldPermissions fp : [
+            SELECT Field, PermissionsRead, PermissionsEdit
+            FROM FieldPermissions
+            WHERE ParentId = :parentId
+              AND SobjectType = :objectApiName
+            ORDER BY Field
+        ]) {
+            String fieldApiName = fp.Field;
+            Integer dot = fieldApiName.indexOf('.');
+            if (dot >= 0) {
+                fieldApiName = fieldApiName.substring(dot + 1);
+            }
+            String label = fieldApiName;
+            if (fieldDescribe != null && fieldDescribe.containsKey(fieldApiName.toLowerCase())) {
+                label = fieldDescribe.get(fieldApiName.toLowerCase()).getDescribe().getLabel();
+            }
+            results.add(new Map<String, Object>{
+                'field' => fieldApiName,
+                'label' => label,
+                'read' => fp.PermissionsRead,
+                'edit' => fp.PermissionsEdit
+            });
+        }
+        results.sort(new MapLabelComparatorObj());
+        return results;
+    }
+
     private static List<Map<String, Object>> getGroupMembers(Id permissionSetGroupId) {
         List<Map<String, Object>> members = new List<Map<String, Object>>();
         for (PermissionSetGroupComponent c : [

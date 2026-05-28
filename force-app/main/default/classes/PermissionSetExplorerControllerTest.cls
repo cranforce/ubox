@@ -112,6 +112,49 @@ private class PermissionSetExplorerControllerTest {
     }
 
     @IsTest
+    static void testGetFieldPermissions() {
+        PermissionSet ps = createTestPermissionSetWithObjectPerm();
+        insert new FieldPermissions(
+            ParentId = ps.Id, SobjectType = 'Account', Field = 'Account.Fax',
+            PermissionsRead = true, PermissionsEdit = true
+        );
+
+        Test.startTest();
+        List<Map<String, Object>> rows =
+            PermissionSetExplorerController.getFieldPermissions(ps.Id, 'PermissionSet', 'Account');
+        Test.stopTest();
+
+        System.assertEquals(1, rows.size(), 'Should return the Account.Fax field permission');
+        Map<String, Object> row = rows[0];
+        System.assertEquals('Fax', (String) row.get('field'));
+        System.assertEquals(true, row.get('read'));
+        System.assertEquals(true, row.get('edit'));
+        System.assertNotEquals(null, row.get('label'), 'Should resolve a field label');
+
+        // Blank object api name yields an empty list (guard clause).
+        System.assertEquals(
+            0,
+            PermissionSetExplorerController.getFieldPermissions(ps.Id, 'PermissionSet', null).size(),
+            'Blank object should yield no rows'
+        );
+    }
+
+    @IsTest
+    static void testGetFieldPermissionsGroupNoAggregate() {
+        PermissionSet member = createTestPermissionSetWithObjectPerm();
+        PermissionSetGroup psg = createTestPermissionSetGroup(member);
+
+        Test.startTest();
+        // In a test context the auto-generated aggregated PS for the group does
+        // not exist, so the PSG branch returns gracefully with no rows.
+        List<Map<String, Object>> rows =
+            PermissionSetExplorerController.getFieldPermissions(psg.Id, 'PermissionSetGroup', 'Account');
+        Test.stopTest();
+
+        System.assertEquals(0, rows.size(), 'No aggregated PS means no field permissions');
+    }
+
+    @IsTest
     static void testGetPermissionSetGroupDetail() {
         PermissionSet ps = createTestPermissionSetWithObjectPerm();
         PermissionSetGroup psg = createTestPermissionSetGroup(ps);

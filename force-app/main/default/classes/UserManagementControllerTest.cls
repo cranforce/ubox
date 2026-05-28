@@ -334,4 +334,61 @@ private class UserManagementControllerTest {
         }
         System.assert(foundApiEnabled, 'API Enabled system permission should appear');
     }
+
+    @IsTest
+    static void testGetUserFieldPermissions() {
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            FirstName = 'Fls', LastName = 'PermTest',
+            Email = 'flstest@example.com',
+            Username = 'flstest' + Datetime.now().getTime() + '@example.com.ubox',
+            Alias = 'flstst', ProfileId = stdProfile.Id,
+            TimeZoneSidKey = 'America/Los_Angeles', LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US', IsActive = true
+        );
+        insert testUser;
+
+        PermissionSet ps = new PermissionSet(
+            Name = 'uBox_FlsTest_PS_' + String.valueOf(Datetime.now().getTime()),
+            Label = 'uBox FlsTest PS',
+            PermissionsApiEnabled = true
+        );
+        insert ps;
+        insert new ObjectPermissions(
+            ParentId = ps.Id, SobjectType = 'Account',
+            PermissionsRead = true, PermissionsEdit = true
+        );
+        insert new FieldPermissions(
+            ParentId = ps.Id, SobjectType = 'Account', Field = 'Account.Fax',
+            PermissionsRead = true, PermissionsEdit = true
+        );
+        insert new PermissionSetAssignment(
+            AssigneeId = testUser.Id, PermissionSetId = ps.Id
+        );
+
+        Test.startTest();
+        Map<String, Object> result = UserManagementController.getUserFieldPermissions(testUser.Id, 'Account');
+        Test.stopTest();
+
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) result.get('fields');
+        System.assertNotEquals(null, fields, 'Should return fields list');
+        Boolean foundFax = false;
+        for (Map<String, Object> f : fields) {
+            if ('Fax'.equals((String) f.get('field'))) {
+                foundFax = true;
+                System.assertEquals(true, f.get('read'), 'Fax should be readable');
+                System.assertEquals(true, f.get('edit'), 'Fax should be editable');
+                List<Object> grants = (List<Object>) f.get('grants');
+                System.assert(grants != null && !grants.isEmpty(), 'Fax should carry source grants');
+            }
+        }
+        System.assert(foundFax, 'Account.Fax field permission should appear with attribution');
+    }
+
+    @IsTest
+    static void testGetUserFieldPermissionsEmptyArgs() {
+        Map<String, Object> result = UserManagementController.getUserFieldPermissions(null, 'Account');
+        List<Map<String, Object>> fields = (List<Map<String, Object>>) result.get('fields');
+        System.assertEquals(0, fields.size(), 'Null user should yield no fields');
+    }
 }

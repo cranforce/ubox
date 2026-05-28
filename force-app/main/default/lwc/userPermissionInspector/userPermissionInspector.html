@@ -64,6 +64,18 @@
                     </template>
                 </lightning-accordion-section>
 
+                <!-- Field-Level Security (collapsed by default; loads on demand) -->
+                <lightning-accordion-section name="fls" label="Field-Level Security">
+                    <c-field-security-viewer
+                        object-options={objectOptions}
+                        selected-object={flsObject}
+                        field-permissions={flsRows}
+                        is-loading={flsLoading}
+                        show-sources={showFlsSources}
+                        onobjectselect={handleFlsObjectSelect}
+                    ></c-field-security-viewer>
+                </lightning-accordion-section>
+
                 <!-- Tab Settings -->
                 <lightning-accordion-section name="tabs" label={tabCountLabel}>
                     <template lwc:if={hasTabSettings}>

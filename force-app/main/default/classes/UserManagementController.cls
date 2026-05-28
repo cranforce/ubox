@@ -651,86 +651,9 @@ public with sharing class UserManagementController {
             'profileName' => u.Profile != null ? u.Profile.Name : null
         };
 
-        // Build the set of "sources" that contribute to this user's permissions.
-        // sourceById maps the PermissionSet id we'll query (profile-owned PS,
-        // standalone PS, or PSG-aggregated PS) to a source descriptor that
-        // names the *user-facing* origin (profile name, PS label, or PSG label).
-        Map<Id, Map<String, Object>> sourceByPsId = new Map<Id, Map<String, Object>>();
-        // Maintain stable insertion order (Profile first, then PS, then PSG).
-        List<Map<String, Object>> sourcesOrdered = new List<Map<String, Object>>();
-
-        // 1. Profile source: PermissionSet where IsOwnedByProfile = true and Profile.Id = user's profile.
-        if (u.ProfileId != null) {
-            List<PermissionSet> profilePerms = [
-                SELECT Id
-                FROM PermissionSet
-                WHERE IsOwnedByProfile = true
-                  AND ProfileId = :u.ProfileId
-                LIMIT 1
-            ];
-            if (!profilePerms.isEmpty()) {
-                Map<String, Object> src = new Map<String, Object>{
-                    'sourceId' => 'profile:' + u.ProfileId,
-                    'label' => 'Profile: ' + u.Profile.Name,
-                    'type' => 'Profile',
-                    'originId' => u.ProfileId
-                };
-                sourceByPsId.put(profilePerms[0].Id, src);
-                sourcesOrdered.add(src);
-            }
-        }
-
-        // 2. Direct PermissionSet assignments (PermissionSetGroupId is null).
-        for (PermissionSetAssignment psa : [
-            SELECT PermissionSetId, PermissionSet.Label, PermissionSet.Name,
-                   PermissionSet.NamespacePrefix
-            FROM PermissionSetAssignment
-            WHERE AssigneeId = :userId
-              AND PermissionSet.IsOwnedByProfile = false
-              AND PermissionSetGroupId = null
-            ORDER BY PermissionSet.Label
-        ]) {
-            Map<String, Object> src = new Map<String, Object>{
-                'sourceId' => 'ps:' + psa.PermissionSetId,
-                'label' => 'Permission Set: ' + psa.PermissionSet.Label,
-                'type' => 'PermissionSet',
-                'originId' => psa.PermissionSetId
-            };
-            sourceByPsId.put(psa.PermissionSetId, src);
-            sourcesOrdered.add(src);
-        }
-
-        // 3. Permission Set Group assignments. For each PSG the user is assigned to,
-        //    the aggregated permissions live on the PermissionSet record where
-        //    PermissionSetGroupId points at the group — query for that PS id.
-        Set<Id> psgIds = new Set<Id>();
-        Map<Id, String> psgLabel = new Map<Id, String>();
-        for (PermissionSetAssignment psa : [
-            SELECT PermissionSetGroupId, PermissionSetGroup.MasterLabel
-            FROM PermissionSetAssignment
-            WHERE AssigneeId = :userId
-              AND PermissionSetGroupId != null
-        ]) {
-            psgIds.add(psa.PermissionSetGroupId);
-            psgLabel.put(psa.PermissionSetGroupId, psa.PermissionSetGroup.MasterLabel);
-        }
-        if (!psgIds.isEmpty()) {
-            for (PermissionSet aggregated : [
-                SELECT Id, PermissionSetGroupId
-                FROM PermissionSet
-                WHERE PermissionSetGroupId IN :psgIds
-            ]) {
-                Id psgId = aggregated.PermissionSetGroupId;
-                Map<String, Object> src = new Map<String, Object>{
-                    'sourceId' => 'psg:' + psgId,
-                    'label' => 'Permission Set Group: ' + psgLabel.get(psgId),
-                    'type' => 'PermissionSetGroup',
-                    'originId' => psgId
-                };
-                sourceByPsId.put(aggregated.Id, src);
-                sourcesOrdered.add(src);
-            }
-        }
+        SourceContext ctx = buildSourceContext(u);
+        Map<Id, Map<String, Object>> sourceByPsId = ctx.sourceByPsId;
+        List<Map<String, Object>> sourcesOrdered = ctx.sourcesOrdered;
 
         Map<String, Object> result = new Map<String, Object>();
         result.put('user', userInfo);
@@ -986,6 +909,168 @@ public with sharing class UserManagementController {
         result.put('customPermissions', customPerms);
 
         return result;
+    }
+
+    @AuraEnabled
+    public static Map<String, Object> getUserFieldPermissions(Id userId, String objectApiName) {
+        Map<String, Object> result = new Map<String, Object>();
+        List<Map<String, Object>> fields = new List<Map<String, Object>>();
+        result.put('fields', fields);
+        if (userId == null || String.isBlank(objectApiName)) {
+            return result;
+        }
+
+        User u = [
+            SELECT Id, Name, IsActive, ProfileId, Profile.Name
+            FROM User
+            WHERE Id = :userId
+            LIMIT 1
+        ];
+        SourceContext ctx = buildSourceContext(u);
+        if (ctx.sourceByPsId.isEmpty()) {
+            return result;
+        }
+        Set<Id> psIds = ctx.sourceByPsId.keySet();
+
+        // Resolve field labels via describe (best-effort).
+        Map<String, Schema.SObjectField> fieldDescribe = null;
+        Schema.SObjectType sobjType = Schema.getGlobalDescribe().get(objectApiName);
+        if (sobjType != null) {
+            fieldDescribe = sobjType.getDescribe().fields.getMap();
+        }
+
+        // Aggregate per field across all sources (OR the flags, collect grants),
+        // mirroring the object-permission aggregation in getUserEffectivePermissions.
+        Map<String, Map<String, Object>> fieldAgg = new Map<String, Map<String, Object>>();
+        for (FieldPermissions fp : [
+            SELECT ParentId, Field, PermissionsRead, PermissionsEdit
+            FROM FieldPermissions
+            WHERE ParentId IN :psIds
+              AND SobjectType = :objectApiName
+        ]) {
+            Map<String, Object> src = ctx.sourceByPsId.get(fp.ParentId);
+            if (src == null) continue;
+            String fieldApiName = fp.Field;
+            Integer dot = fieldApiName.indexOf('.');
+            if (dot >= 0) {
+                fieldApiName = fieldApiName.substring(dot + 1);
+            }
+            Map<String, Object> entry = fieldAgg.get(fieldApiName);
+            if (entry == null) {
+                String label = fieldApiName;
+                if (fieldDescribe != null && fieldDescribe.containsKey(fieldApiName.toLowerCase())) {
+                    label = fieldDescribe.get(fieldApiName.toLowerCase()).getDescribe().getLabel();
+                }
+                entry = new Map<String, Object>{
+                    'field' => fieldApiName,
+                    'label' => label,
+                    'read' => false,
+                    'edit' => false,
+                    'grants' => new List<Map<String, Object>>()
+                };
+                fieldAgg.put(fieldApiName, entry);
+            }
+            if (fp.PermissionsRead) entry.put('read', true);
+            if (fp.PermissionsEdit) entry.put('edit', true);
+            ((List<Map<String, Object>>) entry.get('grants')).add(new Map<String, Object>{
+                'sourceId' => src.get('sourceId'),
+                'read' => fp.PermissionsRead,
+                'edit' => fp.PermissionsEdit
+            });
+        }
+        fields = new List<Map<String, Object>>(fieldAgg.values());
+        fields.sort(new MapLabelObjComparator());
+        result.put('fields', fields);
+        return result;
+    }
+
+    // Builds the set of "sources" that contribute to a user's permissions.
+    // sourceByPsId maps the PermissionSet id we'll query (profile-owned PS,
+    // standalone PS, or PSG-aggregated PS) to a source descriptor that names the
+    // *user-facing* origin (profile name, PS label, or PSG label). sourcesOrdered
+    // keeps stable insertion order (Profile first, then PS, then PSG).
+    private static SourceContext buildSourceContext(User u) {
+        SourceContext ctx = new SourceContext();
+
+        // 1. Profile source: PermissionSet where IsOwnedByProfile = true and Profile.Id = user's profile.
+        if (u.ProfileId != null) {
+            List<PermissionSet> profilePerms = [
+                SELECT Id
+                FROM PermissionSet
+                WHERE IsOwnedByProfile = true
+                  AND ProfileId = :u.ProfileId
+                LIMIT 1
+            ];
+            if (!profilePerms.isEmpty()) {
+                Map<String, Object> src = new Map<String, Object>{
+                    'sourceId' => 'profile:' + u.ProfileId,
+                    'label' => 'Profile: ' + u.Profile.Name,
+                    'type' => 'Profile',
+                    'originId' => u.ProfileId
+                };
+                ctx.sourceByPsId.put(profilePerms[0].Id, src);
+                ctx.sourcesOrdered.add(src);
+            }
+        }
+
+        // 2. Direct PermissionSet assignments (PermissionSetGroupId is null).
+        for (PermissionSetAssignment psa : [
+            SELECT PermissionSetId, PermissionSet.Label, PermissionSet.Name,
+                   PermissionSet.NamespacePrefix
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :u.Id
+              AND PermissionSet.IsOwnedByProfile = false
+              AND PermissionSetGroupId = null
+            ORDER BY PermissionSet.Label
+        ]) {
+            Map<String, Object> src = new Map<String, Object>{
+                'sourceId' => 'ps:' + psa.PermissionSetId,
+                'label' => 'Permission Set: ' + psa.PermissionSet.Label,
+                'type' => 'PermissionSet',
+                'originId' => psa.PermissionSetId
+            };
+            ctx.sourceByPsId.put(psa.PermissionSetId, src);
+            ctx.sourcesOrdered.add(src);
+        }
+
+        // 3. Permission Set Group assignments. For each PSG the user is assigned to,
+        //    the aggregated permissions live on the PermissionSet record where
+        //    PermissionSetGroupId points at the group — query for that PS id.
+        Set<Id> psgIds = new Set<Id>();
+        Map<Id, String> psgLabel = new Map<Id, String>();
+        for (PermissionSetAssignment psa : [
+            SELECT PermissionSetGroupId, PermissionSetGroup.MasterLabel
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :u.Id
+              AND PermissionSetGroupId != null
+        ]) {
+            psgIds.add(psa.PermissionSetGroupId);
+            psgLabel.put(psa.PermissionSetGroupId, psa.PermissionSetGroup.MasterLabel);
+        }
+        if (!psgIds.isEmpty()) {
+            for (PermissionSet aggregated : [
+                SELECT Id, PermissionSetGroupId
+                FROM PermissionSet
+                WHERE PermissionSetGroupId IN :psgIds
+            ]) {
+                Id psgId = aggregated.PermissionSetGroupId;
+                Map<String, Object> src = new Map<String, Object>{
+                    'sourceId' => 'psg:' + psgId,
+                    'label' => 'Permission Set Group: ' + psgLabel.get(psgId),
+                    'type' => 'PermissionSetGroup',
+                    'originId' => psgId
+                };
+                ctx.sourceByPsId.put(aggregated.Id, src);
+                ctx.sourcesOrdered.add(src);
+            }
+        }
+
+        return ctx;
+    }
+
+    private class SourceContext {
+        Map<Id, Map<String, Object>> sourceByPsId = new Map<Id, Map<String, Object>>();
+        List<Map<String, Object>> sourcesOrdered = new List<Map<String, Object>>();
     }
 
     private class MapLabelObjComparator implements Comparator<Map<String, Object>> {

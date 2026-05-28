@@ -1,0 +1,70 @@
+<template>
+    <div class="slds-var-p-around_small">
+        <template lwc:if={hasObjectOptions}>
+            <lightning-combobox
+                label="Object"
+                placeholder="Select an object..."
+                options={objectOptions}
+                value={selectedObject}
+                onchange={handleObjectChange}
+                variant="label-stacked"
+            ></lightning-combobox>
+
+            <template lwc:if={isLoading}>
+                <div class="slds-is-relative slds-var-p-around_medium">
+                    <lightning-spinner alternative-text="Loading field permissions" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={hasFields}>
+                <div class="slds-var-p-top_small">
+                    <!-- Aggregated, source-attributed view (effective user permissions) -->
+                    <template lwc:if={showSources}>
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={fieldPermissions} for:item="f">
+                                <li key={f.field} class="slds-var-p-around_x-small">
+                                    <strong>{f.label}</strong>
+                                    <span class="slds-text-color_weak slds-var-m-left_x-small">({f.field})</span>
+                                    <div class="slds-var-p-top_xx-small slds-text-body_small slds-text-color_weak">
+                                        Granted by:
+                                        <template for:each={f.grantPills} for:item="g">
+                                            <span key={g.key} class="slds-var-m-left_xx-small fsv-grant">
+                                                <lightning-badge label={g.label} class={g.badgeClass}></lightning-badge>
+                                                <template lwc:if={g.detail}>
+                                                    <span class="slds-text-color_weak slds-var-m-left_xx-small">({g.detail})</span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                    </template>
+
+                    <!-- Simple Field / Read / Edit grid (single permission set or group) -->
+                    <template lwc:else>
+                        <lightning-datatable
+                            key-field="field"
+                            data={fieldPermissions}
+                            columns={fieldColumns}
+                            hide-checkbox-column
+                            resize-column-disabled
+                        ></lightning-datatable>
+                    </template>
+                </div>
+            </template>
+
+            <template lwc:if={showEmptyState}>
+                <p class="slds-var-p-top_small slds-text-color_weak">
+                    No field-level security set for this object.
+                </p>
+            </template>
+        </template>
+
+        <template lwc:else>
+            <p class="slds-text-color_weak">
+                No objects with permissions to inspect.
+            </p>
+        </template>
+    </div>
+</template>
