@@ -21,6 +21,15 @@ export default class SetPasswordModal extends LightningModal {
     errorMessage = '';
     isDone = false;
     finalPassword = '';
+    showPassword = false;
+
+    get passwordInputType() {
+        return this.showPassword ? 'text' : 'password';
+    }
+
+    handleToggleShow(event) {
+        this.showPassword = event.target.checked;
+    }
 
     connectedCallback() {
         isSandboxOrg()
