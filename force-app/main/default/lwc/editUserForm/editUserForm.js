@@ -1,6 +1,7 @@
 import { LightningElement } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
+import SetPasswordModal from 'c/setPasswordModal';
 import getUserFormMetadata from '@salesforce/apex/UserManagementController.getUserFormMetadata';
 import getAvailablePermissionSets from '@salesforce/apex/UserManagementController.getAvailablePermissionSets';
 import getAvailablePublicGroups from '@salesforce/apex/UserManagementController.getAvailablePublicGroups';
@@ -136,6 +137,21 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
 
     handleOpenUserRecord() {
         window.open('/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view', '_blank');
+    }
+
+    async handleSetPassword() {
+        const result = await SetPasswordModal.open({
+            size: 'small',
+            userId: this.selectedUserId,
+            userName: this.selectedUserName
+        });
+        if (result?.status === 'success') {
+            this.showToast(
+                'Password set',
+                `Password updated for ${this.selectedUserName}.`,
+                'success'
+            );
+        }
     }
 
     handleTabActive(event) {

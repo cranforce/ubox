@@ -336,6 +336,81 @@ private class UserManagementControllerTest {
     }
 
     @IsTest
+    static void testIsSandboxOrg() {
+        Boolean result = UserManagementController.isSandboxOrg();
+        System.assertNotEquals(null, result, 'isSandboxOrg should return a Boolean');
+    }
+
+    @IsTest
+    static void testSetUserPasswordSandbox() {
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            FirstName = 'Pwd', LastName = 'Tester',
+            Email = 'pwdtest@example.com',
+            Username = 'pwdtest' + Datetime.now().getTime() + '@example.com.ubox',
+            Alias = 'pwdtst', ProfileId = stdProfile.Id,
+            TimeZoneSidKey = 'America/Los_Angeles', LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US', IsActive = true
+        );
+        insert testUser;
+
+        String newPassword = 'StrongPass123!';
+        UserManagementController.sandboxOverride = true;
+
+        Test.startTest();
+        UserManagementController.setUserPassword(testUser.Id, newPassword);
+        Test.stopTest();
+
+        List<uBox_Log__c> logs = [
+            SELECT Action__c, Status__c, Target_User__c, Detail__c
+            FROM uBox_Log__c
+            WHERE Action__c = 'Set Password' AND Target_User__c = :testUser.Id
+        ];
+        System.assertEquals(1, logs.size(), 'A Set Password log should be created');
+        System.assertEquals('Success', logs[0].Status__c, 'Log should record success');
+        System.assert(
+            logs[0].Detail__c == null || !logs[0].Detail__c.contains(newPassword),
+            'The password must never be written to the audit log'
+        );
+    }
+
+    @IsTest
+    static void testSetUserPasswordProductionBlocked() {
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User testUser = new User(
+            FirstName = 'Pwd', LastName = 'Blocked',
+            Email = 'pwdblocked@example.com',
+            Username = 'pwdblocked' + Datetime.now().getTime() + '@example.com.ubox',
+            Alias = 'pwdblk', ProfileId = stdProfile.Id,
+            TimeZoneSidKey = 'America/Los_Angeles', LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US', IsActive = true
+        );
+        insert testUser;
+
+        UserManagementController.sandboxOverride = false;
+
+        Boolean threw = false;
+        try {
+            UserManagementController.setUserPassword(testUser.Id, 'StrongPass123!');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'setUserPassword should be blocked outside a sandbox');
+    }
+
+    @IsTest
+    static void testSetUserPasswordValidation() {
+        UserManagementController.sandboxOverride = true;
+        Boolean threw = false;
+        try {
+            UserManagementController.setUserPassword(null, '');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'Blank input should be rejected');
+    }
+
+    @IsTest
     static void testGetUserFieldPermissions() {
         Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
         User testUser = new User(

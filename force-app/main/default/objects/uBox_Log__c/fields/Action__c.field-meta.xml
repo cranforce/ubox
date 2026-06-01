@@ -40,6 +40,11 @@
                 <default>false</default>
                 <label>Unassign Permission Set Group</label>
             </value>
+            <value>
+                <fullName>Set Password</fullName>
+                <default>false</default>
+                <label>Set Password</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

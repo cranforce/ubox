@@ -452,6 +452,57 @@ public with sharing class UserManagementController {
         return result;
     }
 
+    // Lets tests exercise the sandbox-only success path: Dev/scratch orgs report
+    // IsSandbox = false, so without an override the guard below would always block.
+    @TestVisible
+    private static Boolean sandboxOverride;
+
+    @AuraEnabled(cacheable=true)
+    public static Boolean isSandboxOrg() {
+        return [SELECT IsSandbox FROM Organization LIMIT 1].IsSandbox;
+    }
+
+    // Sets a user's password directly (Salesforce KB 000387826 workaround for
+    // sandboxes that cannot deliver password-reset emails). System.setPassword
+    // does not send any email. Restricted to sandboxes and to admins with
+    // ManageInternalUsers (which System.setPassword itself requires).
+    @AuraEnabled
+    public static void setUserPassword(Id userId, String password) {
+        Boolean isSandbox = sandboxOverride != null
+            ? sandboxOverride
+            : [SELECT IsSandbox FROM Organization LIMIT 1].IsSandbox;
+        if (!isSandbox) {
+            throw new AuraHandledException('Set Password is only available in sandbox orgs.');
+        }
+        if (userId == null) {
+            throw new AuraHandledException('Select a user before setting a password.');
+        }
+        if (String.isBlank(password)) {
+            throw new AuraHandledException('Password cannot be blank.');
+        }
+
+        String userName;
+        List<User> targets = [SELECT Name FROM User WHERE Id = :userId LIMIT 1];
+        if (targets.isEmpty()) {
+            throw new AuraHandledException('User not found.');
+        }
+        userName = targets[0].Name;
+
+        try {
+            System.setPassword(userId, password);
+        } catch (Exception e) {
+            // Never log the password — only the failure reason.
+            uBoxLogService.createLogAsync('Set Password', userId, UserInfo.getUserId(), 'Error', e.getMessage(), false);
+            throw new AuraHandledException(e.getMessage());
+        }
+
+        // Log asynchronously so the uBox_Log__c (non-setup) insert runs in its own
+        // transaction, avoiding MIXED_DML_OPERATION with the setPassword setup op.
+        // The detail intentionally excludes the password.
+        String detailJson = JSON.serialize(new Map<String, Object>{ 'user' => userName });
+        uBoxLogService.createLogAsync('Set Password', userId, UserInfo.getUserId(), 'Success', detailJson, false);
+    }
+
     @AuraEnabled
     public static void updateUser(
         Id userId,

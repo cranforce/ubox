@@ -3,6 +3,12 @@
         <div slot="actions">
             <template lwc:if={hasUserSelected}>
                 <lightning-button
+                    label="Set Password"
+                    icon-name="utility:lock"
+                    class="slds-var-m-right_x-small"
+                    onclick={handleSetPassword}
+                ></lightning-button>
+                <lightning-button
                     label="Open User Record"
                     icon-name="utility:new_window"
                     onclick={handleOpenUserRecord}
