@@ -2,6 +2,9 @@ import { LightningElement, api } from 'lwc';
 
 export default class UserInfoSection extends LightningElement {
     @api userData = {};
+    // When true (Create User), Username/Alias auto-populate from Email and name.
+    // Edit User sets this false so editing one field never mutates another.
+    @api autoPopulate = false;
     @api userLicenseOptions = [];
     @api profileOptions = [];
     @api roleOptions = [];
@@ -59,6 +62,12 @@ export default class UserInfoSection extends LightningElement {
         }
 
         this.dispatchChange(fieldName, value);
+
+        // Edit User disables auto-population so changing one field never
+        // silently rewrites another (e.g. Email overwriting Username).
+        if (!this.autoPopulate) {
+            return;
+        }
 
         // Auto-populate username and alias when email changes
         if (fieldName === 'Email') {

@@ -14,6 +14,8 @@ export default class CreateUserForm extends NavigationMixin(LightningElement) {
     isLoading = true;
     hasLoaded = false;
     isSubmitting = false;
+    // Create User auto-fills Username/Alias from Email and name.
+    autoPopulate = true;
     showCloneLookup = false;
 
     userData = {};
