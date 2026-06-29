@@ -5,7 +5,7 @@ A Salesforce 2GP managed package that replaces the standard "New User" flow with
 ## Install
 
 **Managed Package (recommended):**
-[Install uBox v0.11.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000K2wvAAC)
+[Install uBox v0.12.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000Lg5tAAC)
 
 **Unlocked Package:**
 [Install uBox Unlocked v0.4.0.1](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000GDHRAA4)

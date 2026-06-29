@@ -5,12 +5,12 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "versionName": "ver 0.12",
-      "versionNumber": "0.12.0.NEXT",
+      "versionName": "ver 0.13",
+      "versionNumber": "0.13.0.NEXT",
       "path": "force-app",
       "default": true,
       "package": "uBox",
-      "ancestorVersion": "0.11.0.LATEST",
+      "ancestorVersion": "0.12.0.LATEST",
       "versionDescription": ""
     }
   ],
@@ -34,6 +34,7 @@
     "uBox@0.8.0-1": "04tfj000000JkFFAA0",
     "uBox@0.9.0-1": "04tfj000000JscbAAC",
     "uBox@0.10.0-1": "04tfj000000JseDAAS",
-    "uBox@0.11.0-1": "04tfj000000K2wvAAC"
+    "uBox@0.11.0-1": "04tfj000000K2wvAAC",
+    "uBox@0.12.0-1": "04tfj000000Lg5tAAC"
   }
 }
