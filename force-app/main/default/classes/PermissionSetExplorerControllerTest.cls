@@ -177,7 +177,9 @@ private class PermissionSetExplorerControllerTest {
 
     @IsTest
     static void testGetPermissionSetDetailNotFound() {
-        Id fakeId = '0PS000000000000AAA';
+        // Use a 15-char Id: an 18-char literal gets bound into the PermissionSet
+        // Id query and overflows the 15-char column in the packaging org store.
+        Id fakeId = '0PS000000000000';
         try {
             PermissionSetExplorerController.getPermissionSetDetail(fakeId);
             System.assert(false, 'Should have thrown for missing permission set');
@@ -188,7 +190,8 @@ private class PermissionSetExplorerControllerTest {
 
     @IsTest
     static void testGetPermissionSetGroupDetailNotFound() {
-        Id fakeId = '0PG000000000000AAA';
+        // 15-char Id for the same reason as testGetPermissionSetDetailNotFound.
+        Id fakeId = '0PG000000000000';
         try {
             PermissionSetExplorerController.getPermissionSetGroupDetail(fakeId);
             System.assert(false, 'Should have thrown for missing permission set group');
