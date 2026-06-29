@@ -121,6 +121,51 @@
             ></lightning-input>
         </div>
 
+        <!-- Address -->
+        <div class="slds-col slds-size_1-of-1 slds-var-p-top_medium slds-var-p-bottom_x-small">
+            <h3 class="slds-text-heading_small">Address</h3>
+        </div>
+        <div class="slds-col slds-size_1-of-1 slds-var-p-bottom_small">
+            <lightning-textarea
+                label="Street"
+                value={street}
+                data-field="Street"
+                onchange={handleFieldChange}
+            ></lightning-textarea>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="City"
+                value={city}
+                data-field="City"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="State/Province"
+                value={state}
+                data-field="State"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Zip/Postal Code"
+                value={postalCode}
+                data-field="PostalCode"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <lightning-input
+                label="Country"
+                value={country}
+                data-field="Country"
+                onchange={handleFieldChange}
+            ></lightning-input>
+        </div>
+
         <!-- Locale Settings -->
         <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
             <lightning-combobox

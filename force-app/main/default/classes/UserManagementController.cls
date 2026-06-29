@@ -178,6 +178,7 @@ public with sharing class UserManagementController {
                    TimeZoneSidKey, LocaleSidKey,
                    EmailEncodingKey, LanguageLocaleKey, IsActive,
                    Department, Title, CompanyName,
+                   Street, City, State, PostalCode, Country,
                    UserPermissionsMarketingUser, UserPermissionsKnowledgeUser,
                    UserPermissionsInteractionUser, UserPermissionsSupportUser,
                    UserPermissionsSFContentUser
@@ -199,6 +200,11 @@ public with sharing class UserManagementController {
         userData.put('Department', sourceUser.Department);
         userData.put('Title', sourceUser.Title);
         userData.put('CompanyName', sourceUser.CompanyName);
+        userData.put('Street', sourceUser.Street);
+        userData.put('City', sourceUser.City);
+        userData.put('State', sourceUser.State);
+        userData.put('PostalCode', sourceUser.PostalCode);
+        userData.put('Country', sourceUser.Country);
         userData.put('UserLicenseId', sourceUser.Profile.UserLicenseId);
         userData.put('UserPermissionsMarketingUser', sourceUser.UserPermissionsMarketingUser);
         userData.put('UserPermissionsKnowledgeUser', sourceUser.UserPermissionsKnowledgeUser);
@@ -303,6 +309,21 @@ public with sharing class UserManagementController {
         if (userData.containsKey('CompanyName')) {
             newUser.CompanyName = (String) userData.get('CompanyName');
         }
+        if (userData.containsKey('Street')) {
+            newUser.Street = (String) userData.get('Street');
+        }
+        if (userData.containsKey('City')) {
+            newUser.City = (String) userData.get('City');
+        }
+        if (userData.containsKey('State')) {
+            newUser.State = (String) userData.get('State');
+        }
+        if (userData.containsKey('PostalCode')) {
+            newUser.PostalCode = (String) userData.get('PostalCode');
+        }
+        if (userData.containsKey('Country')) {
+            newUser.Country = (String) userData.get('Country');
+        }
 
         newUser.UserPermissionsMarketingUser = userData.get('UserPermissionsMarketingUser') == true;
         newUser.UserPermissionsKnowledgeUser = userData.get('UserPermissionsKnowledgeUser') == true;
@@ -362,6 +383,7 @@ public with sharing class UserManagementController {
                    TimeZoneSidKey, LocaleSidKey,
                    EmailEncodingKey, LanguageLocaleKey, IsActive,
                    Department, Title, CompanyName,
+                   Street, City, State, PostalCode, Country,
                    UserPermissionsMarketingUser, UserPermissionsKnowledgeUser,
                    UserPermissionsInteractionUser, UserPermissionsSupportUser,
                    UserPermissionsSFContentUser
@@ -386,6 +408,11 @@ public with sharing class UserManagementController {
         userData.put('Department', sourceUser.Department);
         userData.put('Title', sourceUser.Title);
         userData.put('CompanyName', sourceUser.CompanyName);
+        userData.put('Street', sourceUser.Street);
+        userData.put('City', sourceUser.City);
+        userData.put('State', sourceUser.State);
+        userData.put('PostalCode', sourceUser.PostalCode);
+        userData.put('Country', sourceUser.Country);
         userData.put('UserLicenseId', sourceUser.Profile.UserLicenseId);
         userData.put('UserPermissionsMarketingUser', sourceUser.UserPermissionsMarketingUser);
         userData.put('UserPermissionsKnowledgeUser', sourceUser.UserPermissionsKnowledgeUser);
@@ -540,6 +567,21 @@ public with sharing class UserManagementController {
         }
         if (userData.containsKey('CompanyName')) {
             existingUser.CompanyName = (String) userData.get('CompanyName');
+        }
+        if (userData.containsKey('Street')) {
+            existingUser.Street = (String) userData.get('Street');
+        }
+        if (userData.containsKey('City')) {
+            existingUser.City = (String) userData.get('City');
+        }
+        if (userData.containsKey('State')) {
+            existingUser.State = (String) userData.get('State');
+        }
+        if (userData.containsKey('PostalCode')) {
+            existingUser.PostalCode = (String) userData.get('PostalCode');
+        }
+        if (userData.containsKey('Country')) {
+            existingUser.Country = (String) userData.get('Country');
         }
 
         existingUser.UserPermissionsMarketingUser = userData.get('UserPermissionsMarketingUser') == true;

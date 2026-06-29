@@ -56,6 +56,11 @@ private class UserManagementControllerTest {
         System.assertEquals('', userData.get('Email'), 'Email should be blanked for clone');
         System.assertEquals('', userData.get('Username'), 'Username should be blanked for clone');
         System.assertEquals('', userData.get('Alias'), 'Alias should be blanked for clone');
+        System.assert(userData.containsKey('Street'), 'Clone should include Street');
+        System.assert(userData.containsKey('City'), 'Clone should include City');
+        System.assert(userData.containsKey('State'), 'Clone should include State');
+        System.assert(userData.containsKey('PostalCode'), 'Clone should include PostalCode');
+        System.assert(userData.containsKey('Country'), 'Clone should include Country');
     }
 
     @IsTest
@@ -73,7 +78,12 @@ private class UserManagementControllerTest {
             'LocaleSidKey' => 'en_US',
             'EmailEncodingKey' => 'UTF-8',
             'LanguageLocaleKey' => 'en_US',
-            'IsActive' => true
+            'IsActive' => true,
+            'Street' => '123 Test St',
+            'City' => 'Testville',
+            'State' => 'California',
+            'PostalCode' => '90210',
+            'Country' => 'United States'
         };
 
         Test.startTest();
@@ -88,8 +98,11 @@ private class UserManagementControllerTest {
         Test.stopTest();
 
         System.assertNotEquals(null, userId, 'Should return created user Id');
-        User created = [SELECT LastName, Email FROM User WHERE Id = :userId];
+        User created = [SELECT LastName, Email, Street, City, State, PostalCode, Country FROM User WHERE Id = :userId];
         System.assertEquals('UserCreate', created.LastName);
+        System.assertEquals('123 Test St', created.Street, 'Street should be set');
+        System.assertEquals('Testville', created.City, 'City should be set');
+        System.assertEquals('90210', created.PostalCode, 'Postal code should be set');
     }
 
     @IsTest
@@ -109,6 +122,9 @@ private class UserManagementControllerTest {
         System.assertEquals(currentUser.Email, userData.get('Email'), 'Email should be preserved for edit');
         System.assertEquals(currentUser.Username, userData.get('Username'), 'Username should be preserved for edit');
         System.assertEquals(currentUser.Alias, userData.get('Alias'), 'Alias should be preserved for edit');
+        System.assert(userData.containsKey('Street'), 'Edit data should include Street');
+        System.assert(userData.containsKey('City'), 'Edit data should include City');
+        System.assert(userData.containsKey('Country'), 'Edit data should include Country');
     }
 
     @IsTest
@@ -142,7 +158,12 @@ private class UserManagementControllerTest {
             'LocaleSidKey' => 'en_US',
             'EmailEncodingKey' => 'UTF-8',
             'LanguageLocaleKey' => 'en_US',
-            'IsActive' => true
+            'IsActive' => true,
+            'Street' => '456 Updated Ave',
+            'City' => 'Newtown',
+            'State' => 'New York',
+            'PostalCode' => '10001',
+            'Country' => 'United States'
         };
 
         Test.startTest();
@@ -157,9 +178,12 @@ private class UserManagementControllerTest {
         );
         Test.stopTest();
 
-        User updated = [SELECT FirstName, LastName FROM User WHERE Id = :testUser.Id];
+        User updated = [SELECT FirstName, LastName, Street, City, PostalCode FROM User WHERE Id = :testUser.Id];
         System.assertEquals('EditUpdated', updated.FirstName, 'FirstName should be updated');
         System.assertEquals('TestUserUpdated', updated.LastName, 'LastName should be updated');
+        System.assertEquals('456 Updated Ave', updated.Street, 'Street should be updated');
+        System.assertEquals('Newtown', updated.City, 'City should be updated');
+        System.assertEquals('10001', updated.PostalCode, 'Postal code should be updated');
     }
 
     @IsTest

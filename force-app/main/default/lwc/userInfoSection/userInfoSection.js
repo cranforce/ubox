@@ -33,6 +33,13 @@ export default class UserInfoSection extends LightningElement {
     get department() { return this.userData.Department || ''; }
     get title() { return this.userData.Title || ''; }
     get companyName() { return this.userData.CompanyName || ''; }
+
+    // Address
+    get street() { return this.userData.Street || ''; }
+    get city() { return this.userData.City || ''; }
+    get state() { return this.userData.State || ''; }
+    get postalCode() { return this.userData.PostalCode || ''; }
+    get country() { return this.userData.Country || ''; }
     get isActive() { return this.userData.IsActive !== false; }
 
     // Feature licenses
