@@ -187,6 +187,64 @@ private class UserManagementControllerTest {
     }
 
     @IsTest
+    static void testGetAddressMetadata() {
+        Map<String, Object> meta = UserManagementController.getAddressMetadata();
+        System.assertNotEquals(null, meta.get('stateCountryPicklistsEnabled'), 'Should report CCP flag');
+        System.assertNotEquals(null, meta.get('countryOptions'), 'Should return country options list');
+        System.assertNotEquals(null, meta.get('stateOptionsByCountry'), 'Should return state map');
+
+        if ((Boolean) meta.get('stateCountryPicklistsEnabled')) {
+            List<Object> countries = (List<Object>) meta.get('countryOptions');
+            System.assert(!countries.isEmpty(), 'CCP-enabled org should return country options');
+        }
+    }
+
+    @IsTest
+    static void testCreateUserWithStateCountryPicklists() {
+        // Only meaningful in orgs with State & Country Picklists enabled.
+        if (!UserManagementController.stateCountryPicklistsEnabled()) {
+            return;
+        }
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+
+        Map<String, Object> userData = new Map<String, Object>{
+            'FirstName' => 'Addr',
+            'LastName' => 'CcpUser',
+            'Email' => 'ccpuser@example.com',
+            'Username' => 'ccpuser' + Datetime.now().getTime() + '@example.com.ubox',
+            'Alias' => 'ccpu',
+            'ProfileId' => stdProfile.Id,
+            'TimeZoneSidKey' => 'America/Los_Angeles',
+            'LocaleSidKey' => 'en_US',
+            'EmailEncodingKey' => 'UTF-8',
+            'LanguageLocaleKey' => 'en_US',
+            'IsActive' => true,
+            'Street' => '1 CCP Way',
+            'City' => 'Codeville',
+            'PostalCode' => '94105',
+            'CountryCode' => 'US',
+            'StateCode' => 'CA'
+        };
+
+        Test.startTest();
+        Id userId = UserManagementController.createUser(
+            userData,
+            new List<Id>(), new List<Id>(), new List<Id>(), new List<Id>(), new List<Id>()
+        );
+        Test.stopTest();
+
+        // Dynamic query keeps this compile-safe in orgs without CCP.
+        SObject u = Database.query('SELECT CountryCode, StateCode FROM User WHERE Id = :userId LIMIT 1')[0];
+        System.assertEquals('US', (String) u.get('CountryCode'), 'CountryCode should be set');
+        System.assertEquals('CA', (String) u.get('StateCode'), 'StateCode should be set');
+
+        Map<String, Object> edit = (Map<String, Object>)
+            UserManagementController.getEditUserData(userId).get('user');
+        System.assertEquals('US', (String) edit.get('CountryCode'), 'Edit data should include CountryCode');
+        System.assertEquals('CA', (String) edit.get('StateCode'), 'Edit data should include StateCode');
+    }
+
+    @IsTest
     static void testUpdateUserValidationFailure() {
         Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
 

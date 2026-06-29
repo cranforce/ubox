@@ -212,6 +212,7 @@ public with sharing class UserManagementController {
         userData.put('UserPermissionsSupportUser', sourceUser.UserPermissionsSupportUser);
 
         userData.put('UserPermissionsSFContentUser', sourceUser.UserPermissionsSFContentUser);
+        addAddressCodes(sourceUserId, userData);
         // Blank out unique fields so the admin must fill them in
         userData.put('Email', '');
         userData.put('Username', '');
@@ -315,15 +316,10 @@ public with sharing class UserManagementController {
         if (userData.containsKey('City')) {
             newUser.City = (String) userData.get('City');
         }
-        if (userData.containsKey('State')) {
-            newUser.State = (String) userData.get('State');
-        }
         if (userData.containsKey('PostalCode')) {
             newUser.PostalCode = (String) userData.get('PostalCode');
         }
-        if (userData.containsKey('Country')) {
-            newUser.Country = (String) userData.get('Country');
-        }
+        applyStateCountry(newUser, userData);
 
         newUser.UserPermissionsMarketingUser = userData.get('UserPermissionsMarketingUser') == true;
         newUser.UserPermissionsKnowledgeUser = userData.get('UserPermissionsKnowledgeUser') == true;
@@ -419,6 +415,7 @@ public with sharing class UserManagementController {
         userData.put('UserPermissionsInteractionUser', sourceUser.UserPermissionsInteractionUser);
         userData.put('UserPermissionsSupportUser', sourceUser.UserPermissionsSupportUser);
         userData.put('UserPermissionsSFContentUser', sourceUser.UserPermissionsSFContentUser);
+        addAddressCodes(userId, userData);
 
         List<Id> permissionSetIds = new List<Id>();
         for (PermissionSetAssignment psa : [
@@ -477,6 +474,128 @@ public with sharing class UserManagementController {
         result.put('groupIds', groupIds);
         result.put('packageLicenseIds', packageLicenseIds);
         return result;
+    }
+
+    // --- Address: State & Country Picklist (CCP) support ---------------------
+    // StateCode/CountryCode exist on User ONLY when State and Country/Territory
+    // Picklists are enabled, so every reference to them here is dynamic to keep
+    // the managed package installable in orgs without CCP.
+
+    private static final String BASE_64_ALPHABET =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    public class PicklistEntryWrapper {
+        public String label;
+        public String value;
+        public String validFor;
+        public Boolean active;
+        public Boolean defaultValue;
+    }
+
+    @TestVisible
+    private static Boolean stateCountryPicklistsEnabled() {
+        return Schema.SObjectType.User.fields.getMap().containsKey('countrycode');
+    }
+
+    // Writes State/Country onto the user, using StateCode/CountryCode when CCP is
+    // enabled (the only writable fields then) and the plain text fields otherwise.
+    private static void applyStateCountry(SObject u, Map<String, Object> userData) {
+        if (stateCountryPicklistsEnabled()) {
+            if (userData.containsKey('CountryCode')) {
+                u.put('CountryCode', (String) userData.get('CountryCode'));
+            }
+            if (userData.containsKey('StateCode')) {
+                u.put('StateCode', (String) userData.get('StateCode'));
+            }
+        } else {
+            if (userData.containsKey('State')) {
+                u.put('State', (String) userData.get('State'));
+            }
+            if (userData.containsKey('Country')) {
+                u.put('Country', (String) userData.get('Country'));
+            }
+        }
+    }
+
+    // Adds StateCode/CountryCode to userData (for picklist pre-selection) when CCP
+    // is enabled. No-op otherwise.
+    private static void addAddressCodes(Id userId, Map<String, Object> userData) {
+        if (!stateCountryPicklistsEnabled()) {
+            return;
+        }
+        List<SObject> rows = Database.query(
+            'SELECT StateCode, CountryCode FROM User WHERE Id = :userId LIMIT 1'
+        );
+        if (!rows.isEmpty()) {
+            userData.put('StateCode', rows[0].get('StateCode'));
+            userData.put('CountryCode', rows[0].get('CountryCode'));
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getAddressMetadata() {
+        Map<String, Object> result = new Map<String, Object>();
+        Boolean enabled = stateCountryPicklistsEnabled();
+        result.put('stateCountryPicklistsEnabled', enabled);
+        result.put('countryOptions', new List<Object>());
+        result.put('stateOptionsByCountry', new Map<String, Object>());
+        if (!enabled) {
+            return result;
+        }
+
+        Map<String, Schema.SObjectField> fm = Schema.SObjectType.User.fields.getMap();
+        List<Schema.PicklistEntry> countryEntries =
+            fm.get('countrycode').getDescribe().getPicklistValues();
+        List<Schema.PicklistEntry> stateEntries =
+            fm.get('statecode').getDescribe().getPicklistValues();
+
+        // Active countries in picklist order — this order is what StateCode's
+        // validFor bitmap indexes against.
+        List<Map<String, String>> countryOptions = new List<Map<String, String>>();
+        List<String> countryByIndex = new List<String>();
+        for (Schema.PicklistEntry pe : countryEntries) {
+            if (!pe.isActive()) continue;
+            countryOptions.add(new Map<String, String>{
+                'label' => pe.getLabel(), 'value' => pe.getValue()
+            });
+            countryByIndex.add(pe.getValue());
+        }
+
+        Map<String, List<Map<String, String>>> statesByCountry =
+            new Map<String, List<Map<String, String>>>();
+        for (Schema.PicklistEntry pe : stateEntries) {
+            if (!pe.isActive()) continue;
+            PicklistEntryWrapper w = (PicklistEntryWrapper) JSON.deserialize(
+                JSON.serialize(pe), PicklistEntryWrapper.class
+            );
+            if (String.isBlank(w.validFor)) continue;
+            for (Integer i = 0; i < countryByIndex.size(); i++) {
+                if (!isValidFor(w.validFor, i)) continue;
+                String countryCode = countryByIndex[i];
+                if (!statesByCountry.containsKey(countryCode)) {
+                    statesByCountry.put(countryCode, new List<Map<String, String>>());
+                }
+                statesByCountry.get(countryCode).add(new Map<String, String>{
+                    'label' => pe.getLabel(), 'value' => pe.getValue()
+                });
+            }
+        }
+
+        result.put('countryOptions', countryOptions);
+        result.put('stateOptionsByCountry', statesByCountry);
+        return result;
+    }
+
+    // Decodes a base64 validFor bitmap: true if the controlling value at the given
+    // index is valid for this dependent entry. Each base64 char encodes 6 bits,
+    // MSB first; bit position N maps to controlling index N.
+    private static Boolean isValidFor(String validFor, Integer index) {
+        Integer charPos = index / 6;
+        if (charPos >= validFor.length()) return false;
+        Integer bitWithin = Math.mod(index, 6);
+        Integer charVal = BASE_64_ALPHABET.indexOf(validFor.substring(charPos, charPos + 1));
+        if (charVal < 0) return false;
+        return ((charVal >> (5 - bitWithin)) & 1) == 1;
     }
 
     // Lets tests exercise the sandbox-only success path: Dev/scratch orgs report
@@ -574,15 +693,10 @@ public with sharing class UserManagementController {
         if (userData.containsKey('City')) {
             existingUser.City = (String) userData.get('City');
         }
-        if (userData.containsKey('State')) {
-            existingUser.State = (String) userData.get('State');
-        }
         if (userData.containsKey('PostalCode')) {
             existingUser.PostalCode = (String) userData.get('PostalCode');
         }
-        if (userData.containsKey('Country')) {
-            existingUser.Country = (String) userData.get('Country');
-        }
+        applyStateCountry(existingUser, userData);
 
         existingUser.UserPermissionsMarketingUser = userData.get('UserPermissionsMarketingUser') == true;
         existingUser.UserPermissionsKnowledgeUser = userData.get('UserPermissionsKnowledgeUser') == true;

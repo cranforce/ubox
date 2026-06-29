@@ -1,6 +1,21 @@
-import { LightningElement, api } from 'lwc';
+import { LightningElement, api, wire } from 'lwc';
+import getAddressMetadata from '@salesforce/apex/UserManagementController.getAddressMetadata';
 
 export default class UserInfoSection extends LightningElement {
+    // State & Country Picklist (CCP) metadata, loaded once (cacheable).
+    ccpEnabled = false;
+    countryOptions = [];
+    stateOptionsByCountry = {};
+
+    @wire(getAddressMetadata)
+    wiredAddressMetadata({ data }) {
+        if (data) {
+            this.ccpEnabled = data.stateCountryPicklistsEnabled;
+            this.countryOptions = data.countryOptions || [];
+            this.stateOptionsByCountry = data.stateOptionsByCountry || {};
+        }
+    }
+
     @api userData = {};
     // When true (Create User), Username/Alias auto-populate from Email and name.
     // Edit User sets this false so editing one field never mutates another.
@@ -40,6 +55,12 @@ export default class UserInfoSection extends LightningElement {
     get state() { return this.userData.State || ''; }
     get postalCode() { return this.userData.PostalCode || ''; }
     get country() { return this.userData.Country || ''; }
+
+    // CCP picklist values (codes)
+    get countryCode() { return this.userData.CountryCode || ''; }
+    get stateCode() { return this.userData.StateCode || ''; }
+    get stateOptions() { return this.stateOptionsByCountry[this.countryCode] || []; }
+    get stateSelectDisabled() { return !this.countryCode || this.stateOptions.length === 0; }
     get isActive() { return this.userData.IsActive !== false; }
 
     // Feature licenses
@@ -69,6 +90,11 @@ export default class UserInfoSection extends LightningElement {
         }
 
         this.dispatchChange(fieldName, value);
+
+        // Changing country clears the dependent state selection (CCP orgs).
+        if (fieldName === 'CountryCode') {
+            this.dispatchChange('StateCode', '');
+        }
 
         // Edit User disables auto-population so changing one field never
         // silently rewrites another (e.g. Email overwriting Username).

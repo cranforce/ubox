@@ -143,27 +143,54 @@
         </div>
         <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
             <lightning-input
-                label="State/Province"
-                value={state}
-                data-field="State"
-                onchange={handleFieldChange}
-            ></lightning-input>
-        </div>
-        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
-            <lightning-input
                 label="Zip/Postal Code"
                 value={postalCode}
                 data-field="PostalCode"
                 onchange={handleFieldChange}
             ></lightning-input>
         </div>
+
+        <!-- Country / State: picklists when State & Country Picklists (CCP) are enabled -->
         <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
-            <lightning-input
-                label="Country"
-                value={country}
-                data-field="Country"
-                onchange={handleFieldChange}
-            ></lightning-input>
+            <template lwc:if={ccpEnabled}>
+                <lightning-combobox
+                    label="Country"
+                    value={countryCode}
+                    options={countryOptions}
+                    data-field="CountryCode"
+                    placeholder="Select a country..."
+                    onchange={handleFieldChange}
+                ></lightning-combobox>
+            </template>
+            <template lwc:else>
+                <lightning-input
+                    label="Country"
+                    value={country}
+                    data-field="Country"
+                    onchange={handleFieldChange}
+                ></lightning-input>
+            </template>
+        </div>
+        <div class="slds-col slds-size_1-of-2 slds-var-p-bottom_small">
+            <template lwc:if={ccpEnabled}>
+                <lightning-combobox
+                    label="State/Province"
+                    value={stateCode}
+                    options={stateOptions}
+                    data-field="StateCode"
+                    placeholder="Select a state/province..."
+                    disabled={stateSelectDisabled}
+                    onchange={handleFieldChange}
+                ></lightning-combobox>
+            </template>
+            <template lwc:else>
+                <lightning-input
+                    label="State/Province"
+                    value={state}
+                    data-field="State"
+                    onchange={handleFieldChange}
+                ></lightning-input>
+            </template>
         </div>
 
         <!-- Locale Settings -->
