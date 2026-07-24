@@ -209,31 +209,37 @@ public with sharing class PermissionSetExplorerController {
             coreLikePatterns.add('0KD' + core + '%');
         }
         if (!tabRefs.isEmpty()) {
-            for (TabDefinition td : [
+            // TabDefinition does not support queryMore(), so a SOQL for-loop (which
+            // pages results in 200-record batches) throws once the result exceeds a
+            // single batch. Assign to a List first so each query returns in one batch.
+            List<TabDefinition> tabsByName = [
                 SELECT DurableId, Name, Label, SobjectName
                 FROM TabDefinition
                 WHERE Name IN :tabRefs
                 LIMIT 2000
-            ]) {
+            ];
+            for (TabDefinition td : tabsByName) {
                 if (td.Name != null) byName.put(td.Name, td);
                 if (td.DurableId != null) byDurableId.put(td.DurableId, td);
             }
-            for (TabDefinition td : [
+            List<TabDefinition> tabsByDurableId = [
                 SELECT DurableId, Name, Label, SobjectName
                 FROM TabDefinition
                 WHERE DurableId IN :tabRefs
                 LIMIT 2000
-            ]) {
+            ];
+            for (TabDefinition td : tabsByDurableId) {
                 if (td.Name != null) byName.put(td.Name, td);
                 if (td.DurableId != null) byDurableId.put(td.DurableId, td);
             }
             for (String pattern : coreLikePatterns) {
-                for (TabDefinition td : [
+                List<TabDefinition> tabsByCore = [
                     SELECT DurableId, Name, Label, SobjectName
                     FROM TabDefinition
                     WHERE DurableId LIKE :pattern
                     LIMIT 5
-                ]) {
+                ];
+                for (TabDefinition td : tabsByCore) {
                     if (td.DurableId != null && td.DurableId.length() >= 15) {
                         byCoreSuffix.put(td.DurableId.substring(3, 15), td);
                     }
