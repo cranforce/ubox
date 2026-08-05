@@ -1,0 +1,244 @@
+<apex:page controller="UserPermissionsPdfController"
+           renderAs="pdf"
+           readOnly="true"
+           showHeader="false"
+           sidebar="false"
+           standardStylesheets="false"
+           applyHtmlTag="false"
+           applyBodyTag="false"
+           contentType="text/html">
+<html>
+<head>
+<style type="text/css">
+    @page { margin: 0.6in 0.5in; size: letter; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #1a1a1a; }
+    h1 { font-size: 20px; margin: 0 0 2px 0; }
+    h2 { font-size: 13px; margin: 16px 0 4px 0; border-bottom: 1px solid #888;
+         padding-bottom: 2px; page-break-after: avoid; }
+    h3 { font-size: 11px; margin: 10px 0 3px 0; page-break-after: avoid; }
+    .muted { color: #666; }
+    .subtitle { font-size: 11px; color: #666; margin: 0 0 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 4px 0 8px 0; }
+    th, td { border: 1px solid #cccccc; padding: 3px 5px; text-align: left;
+             vertical-align: top; }
+    th { background-color: #eef1f4; font-size: 9px; text-transform: uppercase;
+         letter-spacing: 0.3px; }
+    td { font-size: 9px; }
+    .summary td { border: none; padding: 2px 6px 2px 0; }
+    .summary .lbl { color: #666; width: 90px; }
+    .center { text-align: center; }
+    .yes { font-weight: bold; color: #0a6b2e; }
+    .chips { color: #444; }
+    ul.plain { margin: 4px 0 8px 18px; padding: 0; }
+    ul.plain li { font-size: 9px; margin-bottom: 1px; }
+    .none { color: #888; font-style: italic; margin: 2px 0 8px 0; }
+</style>
+</head>
+<body>
+
+    <apex:outputPanel rendered="{!NOT(hasUser)}" layout="block">
+        <h1>User Permission Report</h1>
+        <p class="none">No user was specified, or the user could not be found.</p>
+    </apex:outputPanel>
+
+    <apex:outputPanel rendered="{!hasUser}" layout="block">
+        <h1>User Permission Report</h1>
+        <p class="subtitle">Generated {!generatedDate}</p>
+
+        <!-- User summary -->
+        <table class="summary">
+            <tr><td class="lbl">Name</td><td>{!header.name}</td></tr>
+            <tr><td class="lbl">Username</td><td>{!header.username}</td></tr>
+            <tr><td class="lbl">Status</td><td>{!header.status}</td></tr>
+            <tr><td class="lbl">Profile</td><td>{!header.profileName}</td></tr>
+            <tr><td class="lbl">Role</td><td>{!header.roleName}</td></tr>
+            <tr><td class="lbl">User License</td><td>{!header.licenseName}</td></tr>
+        </table>
+
+        <!-- Permission sources -->
+        <h2>Permission Sources</h2>
+        <apex:outputPanel rendered="{!hasSources}" layout="block">
+            <table>
+                <tr><th>Source</th><th>Type</th></tr>
+                <apex:repeat value="{!sources}" var="s">
+                    <tr><td>{!s.label}</td><td>{!s.type}</td></tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasSources)}" layout="block">
+            <p class="none">No permission sources.</p>
+        </apex:outputPanel>
+
+        <!-- Public groups -->
+        <h2>Public Group Memberships</h2>
+        <apex:outputPanel rendered="{!hasPublicGroups}" layout="block">
+            <ul class="plain">
+                <apex:repeat value="{!publicGroups}" var="g">
+                    <li>{!g}</li>
+                </apex:repeat>
+            </ul>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasPublicGroups)}" layout="block">
+            <p class="none">None.</p>
+        </apex:outputPanel>
+
+        <!-- Licenses -->
+        <h2>Permission Set Licenses</h2>
+        <apex:outputPanel rendered="{!hasPermSetLicenses}" layout="block">
+            <ul class="plain">
+                <apex:repeat value="{!permSetLicenses}" var="l">
+                    <li>{!l}</li>
+                </apex:repeat>
+            </ul>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasPermSetLicenses)}" layout="block">
+            <p class="none">None.</p>
+        </apex:outputPanel>
+
+        <h2>Package Licenses</h2>
+        <apex:outputPanel rendered="{!hasPackageLicenses}" layout="block">
+            <ul class="plain">
+                <apex:repeat value="{!packageLicenses}" var="p">
+                    <li>{!p}</li>
+                </apex:repeat>
+            </ul>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasPackageLicenses)}" layout="block">
+            <p class="none">None.</p>
+        </apex:outputPanel>
+
+        <!-- System (user) permissions -->
+        <h2>System Permissions</h2>
+        <apex:outputPanel rendered="{!hasUserPermissions}" layout="block">
+            <table>
+                <tr><th>Permission</th><th>API Name</th><th>Granted By</th></tr>
+                <apex:repeat value="{!userPermissions}" var="up">
+                    <tr>
+                        <td>{!up.label}</td>
+                        <td>{!up.apiName}</td>
+                        <td class="chips">{!up.sources}</td>
+                    </tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasUserPermissions)}" layout="block">
+            <p class="none">No system permissions enabled.</p>
+        </apex:outputPanel>
+
+        <!-- Object permissions -->
+        <h2>Object Permissions</h2>
+        <apex:outputPanel rendered="{!hasObjectPermissions}" layout="block">
+            <table>
+                <tr>
+                    <th>Object</th><th>API</th>
+                    <th class="center">Read</th><th class="center">Create</th>
+                    <th class="center">Edit</th><th class="center">Delete</th>
+                    <th class="center">View All</th><th class="center">Modify All</th>
+                    <th>Granted By</th>
+                </tr>
+                <apex:repeat value="{!objectPermissions}" var="o">
+                    <tr>
+                        <td>{!o.label}</td>
+                        <td>{!o.apiName}</td>
+                        <td class="center yes">{!o.read}</td>
+                        <td class="center yes">{!o.create}</td>
+                        <td class="center yes">{!o.edit}</td>
+                        <td class="center yes">{!o.del}</td>
+                        <td class="center yes">{!o.viewAll}</td>
+                        <td class="center yes">{!o.modifyAll}</td>
+                        <td class="chips">{!o.sources}</td>
+                    </tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasObjectPermissions)}" layout="block">
+            <p class="none">No object permissions granted.</p>
+        </apex:outputPanel>
+
+        <!-- Tab settings -->
+        <h2>Tab Settings</h2>
+        <apex:outputPanel rendered="{!hasTabSettings}" layout="block">
+            <table>
+                <tr><th>Tab</th><th>API Name</th><th>Visibility</th><th>Granted By</th></tr>
+                <apex:repeat value="{!tabSettings}" var="t">
+                    <tr>
+                        <td>{!t.label}</td>
+                        <td>{!t.apiName}</td>
+                        <td>{!t.visibility}</td>
+                        <td class="chips">{!t.sources}</td>
+                    </tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasTabSettings)}" layout="block">
+            <p class="none">No tab settings.</p>
+        </apex:outputPanel>
+
+        <!-- App access -->
+        <h2>App Access</h2>
+        <apex:outputPanel rendered="{!hasAppAccesses}" layout="block">
+            <table>
+                <tr><th>App</th><th>API Name</th><th>Granted By</th></tr>
+                <apex:repeat value="{!appAccesses}" var="a">
+                    <tr>
+                        <td>{!a.label}</td>
+                        <td>{!a.apiName}</td>
+                        <td class="chips">{!a.sources}</td>
+                    </tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasAppAccesses)}" layout="block">
+            <p class="none">No app access granted.</p>
+        </apex:outputPanel>
+
+        <!-- Custom permissions -->
+        <h2>Custom Permissions</h2>
+        <apex:outputPanel rendered="{!hasCustomPermissions}" layout="block">
+            <table>
+                <tr><th>Custom Permission</th><th>API Name</th><th>Granted By</th></tr>
+                <apex:repeat value="{!customPermissions}" var="c">
+                    <tr>
+                        <td>{!c.label}</td>
+                        <td>{!c.apiName}</td>
+                        <td class="chips">{!c.sources}</td>
+                    </tr>
+                </apex:repeat>
+            </table>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasCustomPermissions)}" layout="block">
+            <p class="none">No custom permissions granted.</p>
+        </apex:outputPanel>
+
+        <!-- Field-level security -->
+        <h2>Field-Level Security</h2>
+        <apex:outputPanel rendered="{!hasFieldSecurity}" layout="block">
+            <apex:repeat value="{!fieldSecurity}" var="fo">
+                <h3>{!fo.label} ({!fo.apiName})</h3>
+                <table>
+                    <tr>
+                        <th>Field</th><th>API Name</th>
+                        <th class="center">Read</th><th class="center">Edit</th>
+                        <th>Granted By</th>
+                    </tr>
+                    <apex:repeat value="{!fo.fields}" var="f">
+                        <tr>
+                            <td>{!f.label}</td>
+                            <td>{!f.field}</td>
+                            <td class="center yes">{!f.read}</td>
+                            <td class="center yes">{!f.edit}</td>
+                            <td class="chips">{!f.sources}</td>
+                        </tr>
+                    </apex:repeat>
+                </table>
+            </apex:repeat>
+        </apex:outputPanel>
+        <apex:outputPanel rendered="{!NOT(hasFieldSecurity)}" layout="block">
+            <p class="none">No field-level security granted.</p>
+        </apex:outputPanel>
+
+    </apex:outputPanel>
+
+</body>
+</html>
+</apex:page>

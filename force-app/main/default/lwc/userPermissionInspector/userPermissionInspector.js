@@ -1,4 +1,5 @@
 import { LightningElement, api } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getUserEffectivePermissions from '@salesforce/apex/UserManagementController.getUserEffectivePermissions';
 import getUserFieldPermissions from '@salesforce/apex/UserManagementController.getUserFieldPermissions';
@@ -9,7 +10,7 @@ const SOURCE_BADGE_CLASS = {
     PermissionSetGroup: 'slds-theme_warning'
 };
 
-export default class UserPermissionInspector extends LightningElement {
+export default class UserPermissionInspector extends NavigationMixin(LightningElement) {
     _userId;
 
     @api
@@ -216,6 +217,32 @@ export default class UserPermissionInspector extends LightningElement {
         if (g.read) parts.push('R');
         if (g.edit) parts.push('E');
         return parts.length ? parts.join('') : '—';
+    }
+
+    // Opens the packaged Visualforce PDF report for the current user in a new
+    // browser tab. GenerateUrl resolves the /apex/ path to the correct
+    // Visualforce domain before we window.open it.
+    handleDownloadPdf() {
+        if (!this._userId) {
+            return;
+        }
+        const relativeUrl = `/apex/ubox__UserPermissionsPdf?id=${this._userId}`;
+        this[NavigationMixin.GenerateUrl]({
+            type: 'standard__webPage',
+            attributes: { url: relativeUrl }
+        })
+            .then((generatedUrl) => {
+                window.open(generatedUrl, '_blank');
+            })
+            .catch((error) => {
+                this.dispatchEvent(
+                    new ShowToastEvent({
+                        title: 'Unable to open PDF',
+                        message: this.extractErrorMessage(error),
+                        variant: 'error'
+                    })
+                );
+            });
     }
 
     async loadDetail() {

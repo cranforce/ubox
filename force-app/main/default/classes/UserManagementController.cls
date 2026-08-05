@@ -1191,6 +1191,103 @@ public with sharing class UserManagementController {
         return result;
     }
 
+    // Full field-level security across every object the user can touch, grouped
+    // by object. Reuses buildSourceContext so the source resolution stays in one
+    // place, and does a single bulk FieldPermissions query (rather than one per
+    // object) to stay well under the SOQL query limit. Used by the PDF report.
+    // Returns { objects: [ { apiName, label, fields: [ { field, label, read,
+    // edit, sources[] } ] } ] } — mirroring getUserFieldPermissions per object.
+    public static Map<String, Object> getAllUserFieldPermissions(Id userId) {
+        Map<String, Object> result = new Map<String, Object>();
+        List<Map<String, Object>> objects = new List<Map<String, Object>>();
+        result.put('objects', objects);
+        if (userId == null) {
+            return result;
+        }
+
+        User u = [
+            SELECT Id, IsActive, ProfileId, Profile.Name
+            FROM User
+            WHERE Id = :userId
+            LIMIT 1
+        ];
+        SourceContext ctx = buildSourceContext(u);
+        if (ctx.sourceByPsId.isEmpty()) {
+            return result;
+        }
+        Set<Id> psIds = ctx.sourceByPsId.keySet();
+
+        // objectApiName -> (fieldApiName -> aggregated entry)
+        Map<String, Map<String, Map<String, Object>>> byObject =
+            new Map<String, Map<String, Map<String, Object>>>();
+        for (FieldPermissions fp : [
+            SELECT ParentId, SobjectType, Field, PermissionsRead, PermissionsEdit
+            FROM FieldPermissions
+            WHERE ParentId IN :psIds
+            ORDER BY SobjectType
+        ]) {
+            Map<String, Object> src = ctx.sourceByPsId.get(fp.ParentId);
+            if (src == null) continue;
+            Map<String, Map<String, Object>> fieldAgg = byObject.get(fp.SobjectType);
+            if (fieldAgg == null) {
+                fieldAgg = new Map<String, Map<String, Object>>();
+                byObject.put(fp.SobjectType, fieldAgg);
+            }
+            String fieldApiName = fp.Field;
+            Integer dot = fieldApiName.indexOf('.');
+            if (dot >= 0) {
+                fieldApiName = fieldApiName.substring(dot + 1);
+            }
+            Map<String, Object> entry = fieldAgg.get(fieldApiName);
+            if (entry == null) {
+                entry = new Map<String, Object>{
+                    'field' => fieldApiName,
+                    'label' => fieldApiName,
+                    'read' => false,
+                    'edit' => false,
+                    'sources' => new List<String>()
+                };
+                fieldAgg.put(fieldApiName, entry);
+            }
+            if (fp.PermissionsRead) entry.put('read', true);
+            if (fp.PermissionsEdit) entry.put('edit', true);
+            ((List<String>) entry.get('sources')).add((String) src.get('sourceId'));
+        }
+
+        // Resolve object + field labels via describe (best-effort) and emit
+        // objects sorted by API name, fields sorted by label.
+        Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
+        List<String> objectApiNames = new List<String>(byObject.keySet());
+        objectApiNames.sort();
+        for (String objApi : objectApiNames) {
+            String objLabel = objApi;
+            Map<String, Schema.SObjectField> fieldDescribe = null;
+            Schema.SObjectType sobjType = globalDescribe.get(objApi);
+            if (sobjType != null) {
+                Schema.DescribeSObjectResult dsr = sobjType.getDescribe();
+                objLabel = dsr.getLabel();
+                fieldDescribe = dsr.fields.getMap();
+            }
+            Map<String, Map<String, Object>> fieldAgg = byObject.get(objApi);
+            for (Map<String, Object> entry : fieldAgg.values()) {
+                if (fieldDescribe != null) {
+                    String fk = ((String) entry.get('field')).toLowerCase();
+                    if (fieldDescribe.containsKey(fk)) {
+                        entry.put('label', fieldDescribe.get(fk).getDescribe().getLabel());
+                    }
+                }
+            }
+            List<Map<String, Object>> fields = new List<Map<String, Object>>(fieldAgg.values());
+            fields.sort(new MapLabelObjComparator());
+            objects.add(new Map<String, Object>{
+                'apiName' => objApi,
+                'label' => objLabel,
+                'fields' => fields
+            });
+        }
+        return result;
+    }
+
     // Builds the set of "sources" that contribute to a user's permissions.
     // sourceByPsId maps the PermissionSet id we'll query (profile-owned PS,
     // standalone PS, or PSG-aggregated PS) to a source descriptor that names the

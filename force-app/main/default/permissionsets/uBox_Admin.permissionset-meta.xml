@@ -17,6 +17,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>UserPermissionsPdfController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>UserUpdateAssignmentQueueable</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -53,6 +57,10 @@
     <hasActivationRequired>false</hasActivationRequired>
     <label>uBox Admin</label>
     <license>Salesforce</license>
+    <pageAccesses>
+        <apexPage>UserPermissionsPdf</apexPage>
+        <enabled>true</enabled>
+    </pageAccesses>
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>false</allowDelete>
