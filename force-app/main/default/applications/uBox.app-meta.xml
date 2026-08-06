@@ -16,6 +16,7 @@
     <tabs>Create_User</tabs>
     <tabs>Edit_User</tabs>
     <tabs>Permission_Set_Explorer</tabs>
+    <tabs>Permission_Comparison</tabs>
     <tabs>uBox_Log__c</tabs>
     <uiType>Lightning</uiType>
 </CustomApplication>

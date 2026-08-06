@@ -5,6 +5,10 @@
         <visible>true</visible>
     </applicationVisibilities>
     <classAccesses>
+        <apexClass>PermissionComparisonController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>PermissionSetExplorerController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -76,6 +80,10 @@
     </tabSettings>
     <tabSettings>
         <tab>Edit_User</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Permission_Comparison</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
