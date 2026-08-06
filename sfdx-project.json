@@ -11,7 +11,7 @@
       "default": true,
       "package": "uBox",
       "ancestorVersion": "0.13.0.LATEST",
-      "versionDescription": ""
+      "versionDescription": "Add Permissions Comparison tab to diff two users' mechanisms and effective permissions"
     }
   ],
   "packageAliases": {
@@ -36,6 +36,7 @@
     "uBox@0.10.0-1": "04tfj000000JseDAAS",
     "uBox@0.11.0-1": "04tfj000000K2wvAAC",
     "uBox@0.12.0-1": "04tfj000000Lg5tAAC",
-    "uBox@0.13.0-1": "04tfj000000PwLlAAK"
+    "uBox@0.13.0-1": "04tfj000000PwLlAAK",
+    "uBox@0.14.0-1": "04tfj000000Q9FlAAK"
   }
 }
