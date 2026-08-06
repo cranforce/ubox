@@ -5,13 +5,13 @@
   "sourceApiVersion": "65.0",
   "packageDirectories": [
     {
-      "versionName": "ver 0.14",
-      "versionNumber": "0.14.0.NEXT",
+      "versionName": "ver 0.15",
+      "versionNumber": "0.15.0.NEXT",
       "path": "force-app",
       "default": true,
       "package": "uBox",
-      "ancestorVersion": "0.13.0.LATEST",
-      "versionDescription": "Add Permissions Comparison tab to diff two users' mechanisms and effective permissions"
+      "ancestorVersion": "0.14.0.LATEST",
+      "versionDescription": ""
     }
   ],
   "packageAliases": {
