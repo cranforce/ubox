@@ -10,6 +10,7 @@ export default class PermissionComparison extends LightningElement {
     userBId;
     data;
     isLoading = false;
+    activeSections = [];
 
     // Exclude the already-chosen User A from the User B picker.
     get userBFilter() {
@@ -38,11 +39,14 @@ export default class PermissionComparison extends LightningElement {
     async handleCompare() {
         this.isLoading = true;
         this.data = null;
+        this.activeSections = [];
         try {
             this.data = await getComparison({
                 userAId: this.userAId,
                 userBId: this.userBId
             });
+            // Open every section by default; users can collapse from there.
+            this.activeSections = this.sections.map((s) => s.key);
         } catch (error) {
             this.dispatchEvent(
                 new ShowToastEvent({
@@ -236,6 +240,18 @@ export default class PermissionComparison extends LightningElement {
             bName: this.userBName,
             rows
         };
+    }
+
+    // Quick-link jump: scroll the chosen accordion section into view. (Open
+    // state is left to the user's own toggles so we don't fight the accordion.)
+    handleJump(event) {
+        const key = event.currentTarget.dataset.key;
+        const el = this.template.querySelector(
+            `lightning-accordion-section[data-name="${key}"]`
+        );
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     extractErrorMessage(error) {

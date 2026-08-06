@@ -54,34 +54,56 @@
                         <p class="slds-text-body_small slds-text-color_weak slds-var-m-bottom_small">
                             Showing only differences. A dash (—) means that user does not have the item.
                         </p>
-                        <template for:each={sections} for:item="sec">
-                            <div key={sec.key} class="slds-var-m-bottom_medium">
-                                <div class="slds-text-heading_small slds-var-m-bottom_xx-small">{sec.title}</div>
-                                <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-table_cell-buffer cmp-table">
-                                    <thead>
-                                        <tr class="slds-line-height_reset">
-                                            <th scope="col" class="cmp-col-item"><div class="slds-truncate" title="Item">Item</div></th>
-                                            <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.aName}>{sec.aName}</div></th>
-                                            <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.bName}>{sec.bName}</div></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template for:each={sec.rows} for:item="r">
-                                            <tr key={r.key} class="slds-hint-parent">
-                                                <td>
-                                                    <strong>{r.item}</strong>
-                                                    <template lwc:if={r.secondary}>
-                                                        <div class="slds-text-body_small slds-text-color_weak">{r.secondary}</div>
-                                                    </template>
-                                                </td>
-                                                <td class={r.aClass}>{r.aValue}</td>
-                                                <td class={r.bClass}>{r.bValue}</td>
+
+                        <!-- Quick links -->
+                        <div class="slds-box slds-theme_shade slds-var-m-bottom_medium cmp-jump">
+                            <span class="slds-text-title_caps slds-text-color_weak slds-var-m-right_x-small">Jump to</span>
+                            <template for:each={sections} for:item="sec">
+                                <lightning-button
+                                    key={sec.key}
+                                    variant="base"
+                                    label={sec.title}
+                                    data-key={sec.key}
+                                    onclick={handleJump}
+                                    class="slds-var-m-right_small"
+                                ></lightning-button>
+                            </template>
+                        </div>
+
+                        <lightning-accordion allow-multiple-sections-open active-section-name={activeSections}>
+                            <template for:each={sections} for:item="sec">
+                                <lightning-accordion-section
+                                    key={sec.key}
+                                    name={sec.key}
+                                    label={sec.title}
+                                    data-name={sec.key}
+                                >
+                                    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-table_cell-buffer cmp-table">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th scope="col" class="cmp-col-item"><div class="slds-truncate" title="Item">Item</div></th>
+                                                <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.aName}>{sec.aName}</div></th>
+                                                <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.bName}>{sec.bName}</div></th>
                                             </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </template>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={sec.rows} for:item="r">
+                                                <tr key={r.key} class="slds-hint-parent">
+                                                    <td>
+                                                        <strong>{r.item}</strong>
+                                                        <template lwc:if={r.secondary}>
+                                                            <div class="slds-text-body_small slds-text-color_weak">{r.secondary}</div>
+                                                        </template>
+                                                    </td>
+                                                    <td class={r.aClass}>{r.aValue}</td>
+                                                    <td class={r.bClass}>{r.bValue}</td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </lightning-accordion-section>
+                            </template>
+                        </lightning-accordion>
                     </template>
                 </div>
             </template>
