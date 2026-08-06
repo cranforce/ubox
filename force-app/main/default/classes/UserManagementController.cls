@@ -999,11 +999,24 @@ public with sharing class UserManagementController {
                 if (td.Name != null) byName.put(td.Name, td);
                 if (td.DurableId != null) byDurableId.put(td.DurableId, td);
             }
-            for (String pattern : coreLikePatterns) {
-                for (TabDefinition td : [
-                    SELECT DurableId, Name, Label FROM TabDefinition
-                    WHERE DurableId LIKE :pattern LIMIT 5
-                ]) {
+            if (!coreLikePatterns.isEmpty()) {
+                // Bulkify: one query with OR'd LIKE clauses rather than a query
+                // per pattern. A per-pattern loop can exhaust the SOQL query
+                // limit for users with many tabs — doubly so when two users are
+                // compared in a single transaction.
+                List<String> clauses = new List<String>();
+                Map<String, Object> binds = new Map<String, Object>();
+                Integer pi = 0;
+                for (String pattern : coreLikePatterns) {
+                    String key = 'core' + pi;
+                    clauses.add('DurableId LIKE :' + key);
+                    binds.put(key, pattern);
+                    pi++;
+                }
+                String tabQuery = 'SELECT DurableId, Name, Label FROM TabDefinition WHERE ' +
+                    String.join(clauses, ' OR ') + ' LIMIT 2000';
+                for (TabDefinition td : (List<TabDefinition>) Database.queryWithBinds(
+                        tabQuery, binds, AccessLevel.SYSTEM_MODE)) {
                     if (td.DurableId != null && td.DurableId.length() >= 15) {
                         byCoreSuffix.put(td.DurableId.substring(3, 15), td);
                     }
