@@ -1,3 +1,34 @@
-.slds-table th {
+.cmp-table th {
     font-weight: 700;
+}
+
+.cmp-col-item {
+    width: 46%;
+}
+
+.cmp-col-user {
+    width: 27%;
+}
+
+/* Value cells: tinted to match the legend so the two users' columns
+   visually separate, with absent values muted. */
+.cmp-cell {
+    text-align: center;
+    font-weight: 600;
+    white-space: normal;
+}
+
+.cmp-a {
+    background-color: #eef4fb;
+    color: #05628a;
+}
+
+.cmp-b {
+    background-color: #fef6e7;
+    color: #8a5340;
+}
+
+.cmp-none {
+    color: #b5b5b5;
+    font-weight: 400;
 }

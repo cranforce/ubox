@@ -2,6 +2,9 @@ import { LightningElement } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getComparison from '@salesforce/apex/PermissionComparisonController.getComparison';
 
+const PRESENT = '✓'; // ✓
+const ABSENT = '—'; // —
+
 export default class PermissionComparison extends LightningElement {
     userAId;
     userBId;
@@ -73,161 +76,165 @@ export default class PermissionComparison extends LightningElement {
         return this.data && this.data.hasDifferences === true;
     }
 
-    // Unified section model so the template renders every category the same way.
+    // Every category renders as a single aligned table: each differing item is
+    // one row with the value each user has (or a dash if that user lacks it).
     get sections() {
         const d = this.data;
         if (!d || d.hasDifferences === false) {
             return [];
         }
-        const s = [];
+        const out = [];
 
+        // Profile is a single "both present but different" row.
         const prof = d.mechanisms?.profile;
         if (prof && prof.differs) {
-            s.push(
-                this.section('mech-profile', 'Profile', [], [], [
-                    {
-                        key: 'profile',
-                        primary: 'Profile',
-                        secondary: '',
-                        aDetail: prof.a || '—',
-                        bDetail: prof.b || '—'
-                    }
+            out.push(
+                this.buildSection('profile', 'Profile', [
+                    this.row('profile', 'Profile', '', prof.a || ABSENT, prof.b || ABSENT)
                 ])
             );
         }
 
-        const mechDefs = [
+        // Presence-only mechanisms (arrays of name strings).
+        [
             ['Permission Sets', 'permissionSets'],
             ['Permission Set Groups', 'permissionSetGroups'],
             ['Public Groups', 'publicGroups'],
             ['Permission Set Licenses', 'permSetLicenses'],
             ['Package Licenses', 'packageLicenses']
-        ];
-        mechDefs.forEach(([title, key]) => {
+        ].forEach(([title, key]) => {
             const m = d.mechanisms?.[key] || { onlyA: [], onlyB: [] };
-            const onlyA = (m.onlyA || []).map((v, i) => this.entry(key + 'a' + i, v, '', ''));
-            const onlyB = (m.onlyB || []).map((v, i) => this.entry(key + 'b' + i, v, '', ''));
-            if (onlyA.length || onlyB.length) {
-                s.push(this.section('mech-' + key, title, onlyA, onlyB, []));
-            }
+            const rows = [];
+            (m.onlyA || []).forEach((v, i) => rows.push(this.row(key + 'a' + i, v, '', PRESENT, ABSENT)));
+            (m.onlyB || []).forEach((v, i) => rows.push(this.row(key + 'b' + i, v, '', ABSENT, PRESENT)));
+            this.pushSection(out, 'mech-' + key, title, rows);
         });
 
-        this.pushLabelSection(s, 'system', 'System Permissions', d.systemPermissions);
-        this.pushObjectSection(s, d.objectPermissions);
-        this.pushFlsSection(s, d.fieldSecurity);
-        this.pushTabSection(s, d.tabSettings);
-        this.pushLabelSection(s, 'apps', 'App Access', d.appAccesses);
-        this.pushLabelSection(s, 'custom', 'Custom Permissions', d.customPermissions);
+        this.presenceSection(out, 'system', 'System Permissions', d.systemPermissions);
+        this.valueSection(out, 'objects', 'Object Permissions', d.objectPermissions, (e) => this.crud(e));
+        this.flsSection(out, d.fieldSecurity);
+        this.tabSection(out, d.tabSettings);
+        this.presenceSection(out, 'apps', 'App Access', d.appAccesses);
+        this.presenceSection(out, 'custom', 'Custom Permissions', d.customPermissions);
 
-        return s;
+        return out;
     }
 
-    // ---- section builders ------------------------------------------------
+    // ---- section builders (each pushes 0 or 1 section) --------------------
 
-    pushLabelSection(s, prefix, title, diff) {
-        const onlyA = (diff?.onlyA || []).map((e, i) =>
-            this.entry(prefix + 'a' + i, e.label, e.apiName, '')
-        );
-        const onlyB = (diff?.onlyB || []).map((e, i) =>
-            this.entry(prefix + 'b' + i, e.label, e.apiName, '')
-        );
-        if (onlyA.length || onlyB.length) {
-            s.push(this.section(prefix, title, onlyA, onlyB, []));
-        }
-    }
-
-    pushObjectSection(s, diff) {
+    presenceSection(out, key, title, diff) {
         if (!diff) return;
-        const crud = (o) => {
-            const p = [];
-            if (o.read) p.push('R');
-            if (o.create) p.push('C');
-            if (o.edit) p.push('E');
-            if (o.delete) p.push('D');
-            if (o.viewAll) p.push('VA');
-            if (o.modifyAll) p.push('MA');
-            return p.join(' ') || '—';
-        };
-        const onlyA = (diff.onlyA || []).map((e, i) =>
-            this.entry('obja' + i, e.label, e.apiName, crud(e))
+        const rows = [];
+        (diff.onlyA || []).forEach((e, i) =>
+            rows.push(this.row(key + 'a' + i, e.label, e.apiName, PRESENT, ABSENT))
         );
-        const onlyB = (diff.onlyB || []).map((e, i) =>
-            this.entry('objb' + i, e.label, e.apiName, crud(e))
+        (diff.onlyB || []).forEach((e, i) =>
+            rows.push(this.row(key + 'b' + i, e.label, e.apiName, ABSENT, PRESENT))
         );
-        const different = (diff.different || []).map((e, i) => ({
-            key: 'objd' + i,
-            primary: e.label,
-            secondary: e.apiName,
-            aDetail: crud(e.a),
-            bDetail: crud(e.b)
-        }));
-        if (onlyA.length || onlyB.length || different.length) {
-            s.push(this.section('objects', 'Object Permissions', onlyA, onlyB, different));
-        }
+        this.pushSection(out, key, title, rows);
     }
 
-    pushFlsSection(s, diff) {
+    valueSection(out, key, title, diff, fmt) {
         if (!diff) return;
-        const re = (o) => {
-            const p = [];
-            if (o.read) p.push('R');
-            if (o.edit) p.push('E');
-            return p.join(' ') || '—';
-        };
-        const onlyA = (diff.onlyA || []).map((e, i) =>
-            this.entry('flsa' + i, e.label, e.objectLabel + ' · ' + e.field, re(e))
+        const rows = [];
+        (diff.onlyA || []).forEach((e, i) =>
+            rows.push(this.row(key + 'a' + i, e.label, e.apiName, fmt(e), ABSENT))
         );
-        const onlyB = (diff.onlyB || []).map((e, i) =>
-            this.entry('flsb' + i, e.label, e.objectLabel + ' · ' + e.field, re(e))
+        (diff.onlyB || []).forEach((e, i) =>
+            rows.push(this.row(key + 'b' + i, e.label, e.apiName, ABSENT, fmt(e)))
         );
-        const different = (diff.different || []).map((e, i) => ({
-            key: 'flsd' + i,
-            primary: e.label,
-            secondary: e.objectLabel + ' · ' + e.field,
-            aDetail: re(e.a),
-            bDetail: re(e.b)
-        }));
-        if (onlyA.length || onlyB.length || different.length) {
-            s.push(this.section('fls', 'Field-Level Security', onlyA, onlyB, different));
-        }
+        (diff.different || []).forEach((e, i) =>
+            rows.push(this.row(key + 'd' + i, e.label, e.apiName, fmt(e.a), fmt(e.b)))
+        );
+        this.pushSection(out, key, title, rows);
     }
 
-    pushTabSection(s, diff) {
+    flsSection(out, diff) {
         if (!diff) return;
-        const onlyA = (diff.onlyA || []).map((e, i) =>
-            this.entry('taba' + i, e.label, e.apiName, e.visibility)
+        const re = (e) => this.readEdit(e);
+        const rows = [];
+        const sub = (e) => e.objectLabel + ' · ' + e.field;
+        (diff.onlyA || []).forEach((e, i) =>
+            rows.push(this.row('flsa' + i, e.label, sub(e), re(e), ABSENT))
         );
-        const onlyB = (diff.onlyB || []).map((e, i) =>
-            this.entry('tabb' + i, e.label, e.apiName, e.visibility)
+        (diff.onlyB || []).forEach((e, i) =>
+            rows.push(this.row('flsb' + i, e.label, sub(e), ABSENT, re(e)))
         );
-        const different = (diff.different || []).map((e, i) => ({
-            key: 'tabd' + i,
-            primary: e.label,
-            secondary: e.apiName,
-            aDetail: e.a,
-            bDetail: e.b
-        }));
-        if (onlyA.length || onlyB.length || different.length) {
-            s.push(this.section('tabs', 'Tab Settings', onlyA, onlyB, different));
-        }
+        (diff.different || []).forEach((e, i) =>
+            rows.push(this.row('flsd' + i, e.label, sub(e), re(e.a), re(e.b)))
+        );
+        this.pushSection(out, 'fls', 'Field-Level Security', rows);
     }
 
-    entry(key, primary, secondary, detail) {
-        return { key, primary, secondary, detail };
+    tabSection(out, diff) {
+        if (!diff) return;
+        const rows = [];
+        (diff.onlyA || []).forEach((e, i) =>
+            rows.push(this.row('taba' + i, e.label, e.apiName, e.visibility || ABSENT, ABSENT))
+        );
+        (diff.onlyB || []).forEach((e, i) =>
+            rows.push(this.row('tabb' + i, e.label, e.apiName, ABSENT, e.visibility || ABSENT))
+        );
+        (diff.different || []).forEach((e, i) =>
+            rows.push(this.row('tabd' + i, e.label, e.apiName, e.a || ABSENT, e.b || ABSENT))
+        );
+        this.pushSection(out, 'tabs', 'Tab Settings', rows);
     }
 
-    section(key, title, onlyA, onlyB, different) {
+    // ---- helpers ----------------------------------------------------------
+
+    crud(o) {
+        const p = [];
+        if (o.read) p.push('R');
+        if (o.create) p.push('C');
+        if (o.edit) p.push('E');
+        if (o.delete) p.push('D');
+        if (o.viewAll) p.push('VA');
+        if (o.modifyAll) p.push('MA');
+        return p.join(' ') || ABSENT;
+    }
+
+    readEdit(o) {
+        const p = [];
+        if (o.read) p.push('R');
+        if (o.edit) p.push('E');
+        return p.join(' ') || ABSENT;
+    }
+
+    row(key, item, secondary, aValue, bValue) {
         return {
             key,
-            title,
+            item,
+            secondary,
+            aValue,
+            bValue,
+            aClass: this.cellClass(aValue, 'a'),
+            bClass: this.cellClass(bValue, 'b')
+        };
+    }
+
+    cellClass(value, side) {
+        if (value === ABSENT) return 'cmp-cell cmp-none';
+        return side === 'a' ? 'cmp-cell cmp-a' : 'cmp-cell cmp-b';
+    }
+
+    pushSection(out, key, title, rows) {
+        if (!rows.length) return;
+        rows.sort(
+            (x, y) =>
+                (x.item || '').localeCompare(y.item || '') ||
+                (x.secondary || '').localeCompare(y.secondary || '')
+        );
+        out.push(this.buildSection(key, title, rows));
+    }
+
+    buildSection(key, title, rows) {
+        return {
+            key,
+            title: title + ' (' + rows.length + ')',
             aName: this.userAName,
             bName: this.userBName,
-            onlyA,
-            onlyB,
-            different,
-            hasOnlyA: onlyA.length > 0,
-            hasOnlyB: onlyB.length > 0,
-            hasDifferent: different.length > 0
+            rows
         };
     }
 

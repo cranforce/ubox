@@ -44,18 +44,6 @@
 
             <template lwc:if={hasResult}>
                 <div class="slds-var-m-top_medium">
-                    <!-- Legend -->
-                    <div class="slds-box slds-theme_shade slds-var-m-bottom_medium">
-                        <span class="slds-var-m-right_small">
-                            <lightning-badge label={userAName} class="slds-theme_info"></lightning-badge>
-                            <span class="slds-text-color_weak slds-var-m-left_xx-small">= User A</span>
-                        </span>
-                        <span>
-                            <lightning-badge label={userBName} class="slds-theme_warning"></lightning-badge>
-                            <span class="slds-text-color_weak slds-var-m-left_xx-small">= User B</span>
-                        </span>
-                    </div>
-
                     <template lwc:if={identical}>
                         <div class="slds-box slds-theme_success slds-text-align_center">
                             These two users have identical permissions across all compared categories.
@@ -63,84 +51,36 @@
                     </template>
 
                     <template lwc:if={hasDifferences}>
+                        <p class="slds-text-body_small slds-text-color_weak slds-var-m-bottom_small">
+                            Showing only differences. A dash (—) means that user does not have the item.
+                        </p>
                         <template for:each={sections} for:item="sec">
-                            <lightning-card key={sec.key} title={sec.title} class="slds-var-m-bottom_small">
-                                <div class="slds-var-p-horizontal_medium slds-var-p-bottom_small">
-                                    <!-- Only in A -->
-                                    <template lwc:if={sec.hasOnlyA}>
-                                        <div class="slds-var-m-bottom_x-small">
-                                            <div class="slds-text-title_caps slds-text-color_weak slds-var-m-bottom_xx-small">
-                                                Only in {sec.aName}
-                                            </div>
-                                            <ul class="slds-has-dividers_bottom-space">
-                                                <template for:each={sec.onlyA} for:item="e">
-                                                    <li key={e.key} class="slds-var-p-vertical_xx-small">
-                                                        <strong>{e.primary}</strong>
-                                                        <template lwc:if={e.secondary}>
-                                                            <span class="slds-text-color_weak slds-var-m-left_x-small">{e.secondary}</span>
-                                                        </template>
-                                                        <template lwc:if={e.detail}>
-                                                            <lightning-badge label={e.detail} class="slds-var-m-left_x-small slds-theme_info"></lightning-badge>
-                                                        </template>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
-                                    </template>
-
-                                    <!-- Only in B -->
-                                    <template lwc:if={sec.hasOnlyB}>
-                                        <div class="slds-var-m-bottom_x-small">
-                                            <div class="slds-text-title_caps slds-text-color_weak slds-var-m-bottom_xx-small">
-                                                Only in {sec.bName}
-                                            </div>
-                                            <ul class="slds-has-dividers_bottom-space">
-                                                <template for:each={sec.onlyB} for:item="e">
-                                                    <li key={e.key} class="slds-var-p-vertical_xx-small">
-                                                        <strong>{e.primary}</strong>
-                                                        <template lwc:if={e.secondary}>
-                                                            <span class="slds-text-color_weak slds-var-m-left_x-small">{e.secondary}</span>
-                                                        </template>
-                                                        <template lwc:if={e.detail}>
-                                                            <lightning-badge label={e.detail} class="slds-var-m-left_x-small slds-theme_warning"></lightning-badge>
-                                                        </template>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
-                                    </template>
-
-                                    <!-- Different (present for both, but settings diverge) -->
-                                    <template lwc:if={sec.hasDifferent}>
-                                        <div class="slds-text-title_caps slds-text-color_weak slds-var-m-bottom_xx-small">
-                                            Different
-                                        </div>
-                                        <table class="slds-table slds-table_bordered slds-table_cell-buffer">
-                                            <thead>
-                                                <tr class="slds-line-height_reset">
-                                                    <th scope="col"><div class="slds-truncate">Item</div></th>
-                                                    <th scope="col"><div class="slds-truncate">{sec.aName}</div></th>
-                                                    <th scope="col"><div class="slds-truncate">{sec.bName}</div></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <template for:each={sec.different} for:item="e">
-                                                    <tr key={e.key} class="slds-hint-parent">
-                                                        <td>
-                                                            <strong>{e.primary}</strong>
-                                                            <template lwc:if={e.secondary}>
-                                                                <div class="slds-text-body_small slds-text-color_weak">{e.secondary}</div>
-                                                            </template>
-                                                        </td>
-                                                        <td>{e.aDetail}</td>
-                                                        <td>{e.bDetail}</td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </template>
-                                </div>
-                            </lightning-card>
+                            <div key={sec.key} class="slds-var-m-bottom_medium">
+                                <div class="slds-text-heading_small slds-var-m-bottom_xx-small">{sec.title}</div>
+                                <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-table_cell-buffer cmp-table">
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th scope="col" class="cmp-col-item"><div class="slds-truncate" title="Item">Item</div></th>
+                                            <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.aName}>{sec.aName}</div></th>
+                                            <th scope="col" class="cmp-col-user"><div class="slds-truncate" title={sec.bName}>{sec.bName}</div></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={sec.rows} for:item="r">
+                                            <tr key={r.key} class="slds-hint-parent">
+                                                <td>
+                                                    <strong>{r.item}</strong>
+                                                    <template lwc:if={r.secondary}>
+                                                        <div class="slds-text-body_small slds-text-color_weak">{r.secondary}</div>
+                                                    </template>
+                                                </td>
+                                                <td class={r.aClass}>{r.aValue}</td>
+                                                <td class={r.bClass}>{r.bValue}</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
                         </template>
                     </template>
                 </div>
