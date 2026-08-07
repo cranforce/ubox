@@ -2,6 +2,11 @@
 
 A Salesforce 2GP managed package that replaces the standard "New User" flow with a streamlined, single-page Lightning experience. Create or edit users and assign permission sets, permission set groups, permission set licenses, public groups, and package licenses — all from one screen.
 
+## 📖 Documentation
+
+Full documentation — installation, feature guides, and architecture — is published at
+**[cranforce.github.io/ubox](https://cranforce.github.io/ubox/)**.
+
 ## Install
 
 [Install uBox v0.14.0.4](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000Q9xJAAS)
@@ -11,6 +16,8 @@ A Salesforce 2GP managed package that replaces the standard "New User" flow with
 After installing, assign the **uBox Admin** permission set to any user who needs access.
 
 ## Features
+
+> For the complete, up-to-date feature guides see the [documentation site](https://cranforce.github.io/ubox/).
 
 - **Create User** — single-page form with all standard user fields plus five assignment categories
 - **Edit User** — search for an existing user, modify fields, and add/remove assignments with automatic diffing
