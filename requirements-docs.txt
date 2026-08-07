@@ -1,0 +1,5 @@
+# Documentation site dependencies (MkDocs + Material theme).
+# Install with: pip install -r requirements-docs.txt
+# Pinned to the 9.x line: mkdocs-material 2.0 (Feb 2026) removed the plugin/theming
+# system and shipped unlicensed/"not for production". Stay on stable 9.x.
+mkdocs-material>=9.5,<10

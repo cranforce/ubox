@@ -7,6 +7,9 @@ config
 # Dependencies
 node_modules/
 
+# MkDocs build output
+site/
+
 # Environment
 .env
 .env.*
