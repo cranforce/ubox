@@ -548,4 +548,225 @@ private class UserManagementControllerTest {
         List<Map<String, Object>> fields = (List<Map<String, Object>>) result.get('fields');
         System.assertEquals(0, fields.size(), 'Null user should yield no fields');
     }
+
+    // --- Export / Import ------------------------------------------------------
+
+    @IsTest
+    static void testExportUserDefinition() {
+        Profile stdProfile = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        String ts = String.valueOf(Datetime.now().getTime());
+        User testUser = new User(
+            FirstName = 'Exp', LastName = 'Ported',
+            Email = 'exporttest@example.com',
+            Username = 'exporttest' + ts + '@example.com.ubox',
+            Alias = 'exptst', ProfileId = stdProfile.Id,
+            TimeZoneSidKey = 'America/Los_Angeles', LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US', IsActive = true
+        );
+        insert testUser;
+
+        PermissionSet ps = new PermissionSet(
+            Name = 'uBox_ExportTest_PS_' + ts,
+            Label = 'uBox ExportTest PS',
+            PermissionsApiEnabled = true
+        );
+        insert ps;
+        insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
+
+        Group grp = new Group(
+            Name = 'uBox Export Grp ' + ts,
+            DeveloperName = 'uBox_Export_Grp_' + ts,
+            Type = 'Regular'
+        );
+        insert grp;
+        insert new GroupMember(GroupId = grp.Id, UserOrGroupId = testUser.Id);
+
+        Test.startTest();
+        Map<String, Object> envelope = UserManagementController.exportUserDefinition(testUser.Id);
+        Test.stopTest();
+
+        System.assertEquals(1, envelope.get('uboxUserDefinitionVersion'), 'Should stamp version 1');
+        System.assertNotEquals(null, envelope.get('exportedAt'), 'Should include export timestamp');
+        System.assertNotEquals(null, envelope.get('source'), 'Should include source org info');
+
+        List<Object> users = (List<Object>) envelope.get('users');
+        System.assertEquals(1, users.size(), 'Should export exactly one user');
+        Map<String, Object> def = (Map<String, Object>) users[0];
+        Map<String, Object> fields = (Map<String, Object>) def.get('fields');
+        System.assertEquals('Standard User', fields.get('ProfileName'), 'Profile exported by name');
+        System.assertEquals('exporttest@example.com', fields.get('Email'), 'Email exported for reference');
+
+        List<Object> permSets = (List<Object>) def.get('permissionSets');
+        Boolean foundPs = false;
+        for (Object o : permSets) {
+            if (ps.Name.equals((String) ((Map<String, Object>) o).get('name'))) { foundPs = true; break; }
+        }
+        System.assert(foundPs, 'Assigned permission set should be exported by name');
+
+        List<Object> groups = (List<Object>) def.get('publicGroups');
+        Boolean foundGrp = false;
+        for (Object o : groups) {
+            if (grp.DeveloperName.equals((String) ((Map<String, Object>) o).get('developerName'))) {
+                foundGrp = true; break;
+            }
+        }
+        System.assert(foundGrp, 'Public group membership should be exported by developer name');
+    }
+
+    @IsTest
+    static void testPrepareImportHappyPath() {
+        String ts = String.valueOf(Datetime.now().getTime());
+        PermissionSet ps = new PermissionSet(
+            Name = 'uBox_ImportTest_PS_' + ts,
+            Label = 'uBox ImportTest PS',
+            PermissionsApiEnabled = true
+        );
+        insert ps;
+        // Re-read to capture the namespace the org actually assigns (this is a
+        // namespaced org), so the import item matches what a real export would carry.
+        PermissionSet psFull = [SELECT Name, NamespacePrefix, Label FROM PermissionSet WHERE Id = :ps.Id];
+        Group grp = new Group(
+            Name = 'uBox Import Grp ' + ts,
+            DeveloperName = 'uBox_Import_Grp_' + ts,
+            Type = 'Regular'
+        );
+        insert grp;
+        Group grpFull = [SELECT DeveloperName, Name FROM Group WHERE Id = :grp.Id];
+
+        Map<String, Object> def = new Map<String, Object>{
+            'uboxUserDefinitionVersion' => 1,
+            'users' => new List<Object>{
+                new Map<String, Object>{
+                    'fields' => new Map<String, Object>{
+                        'FirstName' => 'Imp', 'LastName' => 'Orted',
+                        'Email' => 'orig@example.com', 'Username' => 'orig@example.com.ubox',
+                        'Alias' => 'orig', 'ProfileName' => 'Standard User',
+                        'TimeZoneSidKey' => 'America/Los_Angeles', 'LocaleSidKey' => 'en_US',
+                        'EmailEncodingKey' => 'UTF-8', 'LanguageLocaleKey' => 'en_US',
+                        'IsActive' => true
+                    },
+                    'permissionSets' => new List<Object>{
+                        new Map<String, Object>{
+                            'name' => psFull.Name,
+                            'namespacePrefix' => psFull.NamespacePrefix,
+                            'label' => psFull.Label
+                        }
+                    },
+                    'publicGroups' => new List<Object>{
+                        new Map<String, Object>{ 'developerName' => grpFull.DeveloperName, 'label' => grpFull.Name }
+                    }
+                }
+            }
+        };
+
+        Map<String, Object> res = UserManagementController.prepareImport(JSON.serialize(def));
+
+        Map<String, Object> user = (Map<String, Object>) res.get('user');
+        System.assertNotEquals(null, user.get('ProfileId'), 'Profile should resolve to an Id');
+        System.assertEquals('', user.get('Email'), 'Email should be blanked on import');
+        System.assertEquals('', user.get('Username'), 'Username should be blanked on import');
+        System.assertEquals('', user.get('Alias'), 'Alias should be blanked on import');
+
+        List<Object> psIds = (List<Object>) res.get('permissionSetIds');
+        System.assertEquals(1, psIds.size(), 'Permission set should resolve');
+        System.assertEquals(ps.Id, (Id) psIds[0], 'Resolved to the matching permission set');
+
+        List<Object> grpIds = (List<Object>) res.get('groupIds');
+        System.assertEquals(1, grpIds.size(), 'Public group should resolve');
+        System.assertEquals(grp.Id, (Id) grpIds[0], 'Resolved to the matching group');
+
+        Map<String, Object> unresolved = (Map<String, Object>) res.get('unresolved');
+        System.assertEquals(0, ((List<Object>) unresolved.get('permissionSets')).size(), 'Nothing unresolved');
+        System.assert(!unresolved.containsKey('profile'), 'Profile resolved, so not flagged');
+
+        Map<String, Object> originals = (Map<String, Object>) res.get('originals');
+        System.assertEquals('orig@example.com', originals.get('email'), 'Original email surfaced as a hint');
+    }
+
+    @IsTest
+    static void testPrepareImportPartialResolution() {
+        String ts = String.valueOf(Datetime.now().getTime());
+        PermissionSet ps = new PermissionSet(
+            Name = 'uBox_PartialTest_PS_' + ts,
+            Label = 'uBox PartialTest PS'
+        );
+        insert ps;
+        PermissionSet psFull = [SELECT Name, NamespacePrefix, Label FROM PermissionSet WHERE Id = :ps.Id];
+
+        Map<String, Object> def = new Map<String, Object>{
+            'uboxUserDefinitionVersion' => 1,
+            'users' => new List<Object>{
+                new Map<String, Object>{
+                    'fields' => new Map<String, Object>{
+                        'LastName' => 'Partial', 'ProfileName' => 'No Such Profile ' + ts
+                    },
+                    'permissionSets' => new List<Object>{
+                        new Map<String, Object>{
+                            'name' => psFull.Name,
+                            'namespacePrefix' => psFull.NamespacePrefix,
+                            'label' => psFull.Label
+                        },
+                        new Map<String, Object>{ 'name' => 'uBox_Missing_PS_' + ts, 'label' => 'Missing PS' }
+                    },
+                    'permissionSetLicenses' => new List<Object>{
+                        new Map<String, Object>{ 'developerName' => 'MissingPsl_' + ts, 'label' => 'Missing PSL' }
+                    },
+                    'packageLicenses' => new List<Object>{
+                        new Map<String, Object>{ 'namespacePrefix' => 'nosuchns' + ts }
+                    }
+                }
+            }
+        };
+
+        Map<String, Object> res = UserManagementController.prepareImport(JSON.serialize(def));
+
+        List<Object> psIds = (List<Object>) res.get('permissionSetIds');
+        System.assertEquals(1, psIds.size(), 'The existing permission set still resolves');
+
+        Map<String, Object> unresolved = (Map<String, Object>) res.get('unresolved');
+        List<Object> unresolvedPs = (List<Object>) unresolved.get('permissionSets');
+        System.assertEquals(1, unresolvedPs.size(), 'Missing PS flagged');
+        System.assertEquals('Missing PS', (String) unresolvedPs[0], 'Uses export label');
+        System.assertEquals(1, ((List<Object>) unresolved.get('permSetLicenses')).size(), 'Missing PSL flagged');
+        System.assertEquals(1, ((List<Object>) unresolved.get('packageLicenses')).size(), 'Missing package flagged');
+        System.assertEquals('No Such Profile ' + ts, unresolved.get('profile'), 'Missing profile flagged');
+
+        Map<String, Object> user = (Map<String, Object>) res.get('user');
+        System.assertEquals(null, user.get('ProfileId'), 'Unmatched profile leaves ProfileId unset');
+    }
+
+    @IsTest
+    static void testPrepareImportBadVersion() {
+        Map<String, Object> def = new Map<String, Object>{
+            'uboxUserDefinitionVersion' => 2,
+            'users' => new List<Object>{ new Map<String, Object>{ 'fields' => new Map<String, Object>() } }
+        };
+        Boolean threw = false;
+        try {
+            UserManagementController.prepareImport(JSON.serialize(def));
+        } catch (AuraHandledException e) {
+            threw = true;
+            System.assert(e.getMessage().contains('version'), 'Should mention the version mismatch');
+        }
+        System.assert(threw, 'An unsupported version should be rejected');
+    }
+
+    @IsTest
+    static void testPrepareImportMalformedJson() {
+        Boolean threwOnGarbage = false;
+        try {
+            UserManagementController.prepareImport('this is not json {');
+        } catch (AuraHandledException e) {
+            threwOnGarbage = true;
+        }
+        System.assert(threwOnGarbage, 'Malformed JSON should be rejected');
+
+        Boolean threwOnBlank = false;
+        try {
+            UserManagementController.prepareImport('');
+        } catch (AuraHandledException e) {
+            threwOnBlank = true;
+        }
+        System.assert(threwOnBlank, 'Blank input should be rejected');
+    }
 }

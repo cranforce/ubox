@@ -49,3 +49,8 @@ values for the new user:
 
 From there it behaves exactly like a normal [Create User](create-user.md) submission — the
 User is inserted synchronously and assignments are applied by a background job.
+
+!!! tip "Need to copy a user to a *different* org?"
+    Clone only works within a single org because it copies record IDs. To replicate a user
+    across orgs (e.g. multiple sandboxes), use **[Export / Import](export-import.md)**, which
+    captures assignments by name so they resolve in the target org.

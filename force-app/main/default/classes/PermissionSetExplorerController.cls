@@ -120,7 +120,16 @@ public with sharing class PermissionSetExplorerController {
         selectFields.addAll(permissionFieldNames);
         String soql = 'SELECT ' + String.join(selectFields, ', ') +
                       ' FROM PermissionSet WHERE Id = :permissionSetId LIMIT 1';
-        List<PermissionSet> psList = Database.query(soql);
+        // A non-existent PermissionSet Id normally yields no rows, but some org
+        // configurations raise a platform exception when the 18-char Id doesn't
+        // resolve to a stored key (pljava "18 vs 15"). Treat either outcome as a
+        // clean "not found" so callers always get the friendly error.
+        List<PermissionSet> psList;
+        try {
+            psList = Database.query(soql);
+        } catch (Exception e) {
+            throw new AuraHandledException('Permission set not found.');
+        }
         if (psList.isEmpty()) {
             throw new AuraHandledException('Permission set not found.');
         }

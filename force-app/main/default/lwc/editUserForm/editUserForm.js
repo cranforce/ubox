@@ -10,6 +10,7 @@ import getAvailablePermissionSetGroups from '@salesforce/apex/UserManagementCont
 import getAvailablePackageLicenses from '@salesforce/apex/UserManagementController.getAvailablePackageLicenses';
 import getAllUsers from '@salesforce/apex/UserManagementController.getAllUsers';
 import getEditUserData from '@salesforce/apex/UserManagementController.getEditUserData';
+import exportUserDefinition from '@salesforce/apex/UserManagementController.exportUserDefinition';
 import updateUser from '@salesforce/apex/UserManagementController.updateUser';
 
 export default class EditUserForm extends NavigationMixin(LightningElement) {
@@ -18,6 +19,8 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     isSubmitting = false;
     selectedUserId = null;
     activeTab = 'details';
+    showExportFallback = false;
+    exportJson = '';
 
     allUsers = [];
 
@@ -137,6 +140,53 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
 
     handleOpenUserRecord() {
         window.open('/lightning/r/User/' + encodeURIComponent(this.selectedUserId) + '/view', '_blank');
+    }
+
+    async handleExport() {
+        this.isLoading = true;
+        try {
+            const envelope = await exportUserDefinition({ userId: this.selectedUserId });
+            const json = JSON.stringify(envelope, null, 2);
+            const lastName = ((envelope && envelope.source && envelope.source.userLabel) || 'user')
+                .split(',')[0]
+                .trim()
+                .replace(/[^a-z0-9]+/gi, '-') || 'user';
+            const filename = `ubox-user-${lastName}-${Date.now()}.json`;
+
+            if (this.downloadJson(json, filename)) {
+                this.showToast('Exported', 'User definition downloaded.', 'success');
+            } else {
+                // Browser/Locker blocked the download — offer copy-paste instead.
+                this.exportJson = json;
+                this.showExportFallback = true;
+            }
+        } catch (error) {
+            this.showToast('Export Error', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    downloadJson(json, filename) {
+        try {
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = filename;
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    handleCloseExportFallback() {
+        this.showExportFallback = false;
     }
 
     async handleSetPassword() {

@@ -6,7 +6,27 @@
                 icon-name="utility:copy"
                 onclick={handleOpenCloneLookup}
                 disabled={isLoading}
+                class="slds-var-m-right_x-small"
             ></lightning-button>
+            <lightning-button
+                label="Import Definition"
+                icon-name="utility:upload"
+                onclick={handleImportClick}
+                disabled={isLoading}
+                class="slds-var-m-right_x-small"
+            ></lightning-button>
+            <lightning-button
+                label="Paste JSON"
+                icon-name="utility:paste"
+                onclick={handleOpenImportPaste}
+                disabled={isLoading}
+            ></lightning-button>
+            <input
+                type="file"
+                accept="application/json,.json"
+                class="import-file-input slds-hide"
+                onchange={handleImportFileChange}
+            />
         </div>
 
         <template lwc:if={isLoading}>
@@ -31,6 +51,72 @@
                             onclick={handleCancelClone}
                         ></lightning-button>
                     </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Import: paste JSON fallback -->
+        <template lwc:if={showImportPaste}>
+            <div class="slds-var-p-around_medium slds-theme_shade slds-border_bottom">
+                <lightning-textarea
+                    label="Paste user definition JSON"
+                    placeholder="Paste the contents of a uBox user-definition .json file..."
+                    value={importPasteValue}
+                    onchange={handleImportPasteChange}
+                ></lightning-textarea>
+                <div class="slds-var-p-top_small">
+                    <lightning-button
+                        label="Load"
+                        variant="brand"
+                        onclick={handleImportPasteConfirm}
+                        class="slds-var-m-right_x-small"
+                    ></lightning-button>
+                    <lightning-button label="Cancel" onclick={handleCancelImportPaste}></lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- Import: unresolved-items warning panel -->
+        <template lwc:if={hasImportWarnings}>
+            <div class="slds-var-p-around_medium">
+                <div class="slds-box slds-theme_warning">
+                    <div class="slds-grid slds-grid_align-spread slds-var-m-bottom_x-small">
+                        <h3 class="slds-text-heading_small">Imported with notes</h3>
+                        <lightning-button-icon
+                            icon-name="utility:close"
+                            variant="bare"
+                            alternative-text="Dismiss"
+                            onclick={handleDismissWarnings}
+                        ></lightning-button-icon>
+                    </div>
+                    <p class="slds-var-m-bottom_x-small">
+                        Set a new <strong>Email</strong>, <strong>Username</strong>, and
+                        <strong>Alias</strong> before creating the user.
+                    </p>
+                    <template lwc:if={importWarnings.originals}>
+                        <p class="slds-text-body_small slds-text-color_weak slds-var-m-bottom_small">
+                            Original values from the export —
+                            Email: {importWarnings.originals.email},
+                            Username: {importWarnings.originals.username},
+                            Alias: {importWarnings.originals.alias}
+                        </p>
+                    </template>
+                    <template lwc:if={importWarnings.hasUnresolved}>
+                        <p class="slds-var-m-bottom_x-small">
+                            These items from the definition don't exist in this org and were
+                            skipped:
+                        </p>
+                        <template for:each={importWarnings.groups} for:item="grp">
+                            <div key={grp.key} class="slds-var-m-bottom_x-small">
+                                <strong>{grp.title}</strong>
+                                <ul class="slds-list_dotted slds-var-m-left_medium">
+                                    <template for:each={grp.items} for:item="it">
+                                        <li key={it.id}>{it.label}</li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+                    </template>
                 </div>
             </div>
         </template>
