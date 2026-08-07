@@ -1,6 +1,6 @@
 # uBox
 
-A Salesforce 2GP managed package that replaces the standard "New User" flow with a streamlined, single-page Lightning experience. Create or edit users and assign permission sets, permission set groups, permission set licenses, public groups, and package licenses — all from one screen.
+A Salesforce 2GP managed package that replaces the standard "New User" flow with a streamlined, single-page Lightning experience, and adds tooling to analyze and move user permissions. Create, edit, clone, export/import, compare, and report on users and their access — all from one app.
 
 ## 📖 Documentation
 
@@ -9,7 +9,7 @@ Full documentation — installation, feature guides, and architecture — is pub
 
 ## Install
 
-[Install uBox v0.14.0.4](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000Q9xJAAS)
+[Install uBox v0.15.0.2](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000QKBBAA4)
 
 > For sandbox installations, replace `login.salesforce.com` with `test.salesforce.com` in the URL.
 
@@ -22,47 +22,47 @@ After installing, assign the **uBox Admin** permission set to any user who needs
 - **Create User** — single-page form with all standard user fields plus five assignment categories
 - **Edit User** — search for an existing user, modify fields, and add/remove assignments with automatic diffing
 - **Clone from User** — pre-populate the create form from an existing user's configuration
-- **Auto-generated fields** — Username mirrors Email and Alias is derived from the user's name, unless manually overridden
-- **License-aware profiles** — profile picklist filters automatically based on the selected User License
-- **Async assignments** — permission sets, groups, and licenses are assigned via queueable jobs to avoid mixed DML errors
-- **Partial success** — individual assignment failures are logged but don't block the overall operation
+- **Export / Import** — export a user definition (fields + assignment *names*) to a portable `.json` file and import it in another org to recreate the user; unmatched items are reported, not silently dropped
+- **Permission Set Explorer** — browse permission sets / groups, see what they grant, and view or manage who's assigned
+- **Permissions Comparison** — side-by-side A | B diff of two users' effective access
+- **User Permission Report** — printable PDF of a user's effective permissions, attributed to their source
+- **Set Password (sandbox)** — set a sandbox user's password directly, without email
+- **Activity logs & notifications** — every action is written to `uBox_Log__c`, with desktop/mobile completion notifications
+- **License-aware profiles**, **auto-generated Username/Alias**, **async assignments** (mixed-DML-safe), and **partial success**
 
 ## Architecture
 
+The **uBox** app exposes five tabs: Create User, Edit User, Permission Set Explorer, Permissions Comparison, and uBox Logs.
+
 ```
-uBox App
-├── Create User tab → createUserForm (LWC)
-│     ├── userInfoSection — form fields, auto-gen username/alias
-│     ├── dualListSection × 5 — perm sets, perm set groups, PSLs, groups, package licenses
-│     └── createUser() → UserAssignmentQueueable (async)
-│
-└── Edit User tab → editUserForm (LWC)
-      ├── lightning-record-picker — search for user to edit
-      ├── userInfoSection (reused)
-      ├── dualListSection × 5 (reused)
-      └── updateUser() → diffs assignments → UserUpdateAssignmentQueueable (async)
+Create User → createUserForm ─┐
+Edit User   → editUserForm  ──┤ userInfoSection + dualListSection × 5
+                              └→ create/updateUser() → *AssignmentQueueable (async)
+Export/Import → exportUserDefinition() / prepareImport() (IDs ⇄ names)
+Permission Set Explorer → permissionSetExplorer
+Permissions Comparison  → permissionComparison
+uBox Logs → uBox_Log__c
 ```
 
 ### Apex Classes
 
 | Class | Sharing | Purpose |
 |-------|---------|---------|
-| `UserManagementController` | `with sharing` | `@AuraEnabled` methods for form metadata, user CRUD, and clone/edit data retrieval |
+| `UserManagementController` | `with sharing` | Form metadata, user CRUD, clone, **export/import**, effective-permission + FLS engine, sandbox password, CCP metadata |
 | `UserAssignmentQueueable` | `without sharing` | Post-creation assignment of perm sets, groups, and licenses |
 | `UserUpdateAssignmentQueueable` | `without sharing` | Post-edit assignment diffing — adds new and removes deselected assignments |
+| `PermissionSetExplorerController` | `with sharing` | Permission set / group detail, members, assigned users, assign/unassign |
+| `PermissionComparisonController` | `with sharing` | Server-side diff of two users' effective access |
+| `UserPermissionsPdfController` | `with sharing` | Backs the `UserPermissionsPdf` Visualforce report |
+| `uBoxLogService` | `without sharing` | Writes `uBox_Log__c` entries and sends completion notifications |
 
-### LWC Components
+### Key LWC Components
 
-| Component | Exposed | Description |
-|-----------|---------|-------------|
-| `createUserForm` | Yes | Parent orchestrator for user creation |
-| `editUserForm` | Yes | Parent orchestrator for user editing |
-| `userInfoSection` | No | Reusable form fields with validation and auto-generation |
-| `dualListSection` | No | Thin wrapper around `lightning-dual-listbox` |
+Exposed roots: `createUserForm`, `editUserForm`, `permissionSetExplorer`, `permissionComparison`. Supporting (not exposed): `userInfoSection`, `dualListSection`, `userList`, `permissionSetList`, `permissionSetDetail`, `userPermissionInspector`, `fieldSecurityViewer`, `setPasswordModal`.
 
 ### Permission Set: uBox Admin
 
-Grants access to the uBox app, all three Apex classes, both tabs, and the `ManageInternalUsers` and `AssignPermissionSets` user permissions.
+Grants the uBox app, all uBox Apex classes, the `UserPermissionsPdf` page, all five tabs, access to `uBox_Log__c`, and the `ManageInternalUsers` + `AssignPermissionSets` user permissions.
 
 ## Development
 
@@ -87,11 +87,11 @@ sf apex run test --class-names UserManagementControllerTest --result-format huma
 # Create a scratch org
 sf org create scratch -f config/project-scratch-def.json -a ubox-scratch
 
-# Create a managed package version
+# Create a managed package version (use --code-coverage before promoting)
 sf package version create -p uBox -w 10 --code-coverage --installation-key-bypass
 
-# Create an unlocked package version
-sf package version create -p "uBox Unlocked" -w 10 --installation-key-bypass
+# Promote a version to released (required before installing into production)
+sf package version promote --package uBox@x.y.z-n
 ```
 
 ### Project Config

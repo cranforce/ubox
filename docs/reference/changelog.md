@@ -4,7 +4,7 @@ Notable changes per release, newest first. Entries are reconstructed from the pa
 release history; each version corresponds to a promoted managed-package version in
 `sfdx-project.json`.
 
-## 0.15.0 — _in development_
+## 0.15.0 — 2026-08-07
 
 - **New: [Export / Import User Definitions](../features/export-import.md)** — export a user
   (fields plus the *names* of their profile, role, permission sets, permission set groups,
