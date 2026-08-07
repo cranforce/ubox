@@ -6,9 +6,14 @@ release history; each version corresponds to a promoted managed-package version 
 
 ## 0.15.0 — _in development_
 
+- **New: [Export / Import User Definitions](../features/export-import.md)** — export a user
+  (fields plus the *names* of their profile, role, permission sets, permission set groups,
+  permission set licenses, public groups, and package licenses) to a portable `.json` file,
+  and import it in another org to pre-fill the Create User form. Assignments are matched by
+  name so a user can be replicated across sandboxes; anything the target org is missing is
+  reported rather than silently dropped.
 - Added a public documentation site (this site), built with MkDocs and published to GitHub
   Pages.
-- _Add further highlights here as work lands on this version._
 
 ## 0.14.0
 

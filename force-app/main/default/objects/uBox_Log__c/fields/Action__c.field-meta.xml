@@ -45,6 +45,11 @@
                 <default>false</default>
                 <label>Set Password</label>
             </value>
+            <value>
+                <fullName>Export User</fullName>
+                <default>false</default>
+                <label>Export User</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

@@ -8,6 +8,7 @@ import getAvailablePermissionSetLicenses from '@salesforce/apex/UserManagementCo
 import getAvailablePermissionSetGroups from '@salesforce/apex/UserManagementController.getAvailablePermissionSetGroups';
 import getAvailablePackageLicenses from '@salesforce/apex/UserManagementController.getAvailablePackageLicenses';
 import getCloneSourceData from '@salesforce/apex/UserManagementController.getCloneSourceData';
+import prepareImport from '@salesforce/apex/UserManagementController.prepareImport';
 import createUser from '@salesforce/apex/UserManagementController.createUser';
 
 export default class CreateUserForm extends NavigationMixin(LightningElement) {
@@ -17,6 +18,9 @@ export default class CreateUserForm extends NavigationMixin(LightningElement) {
     // Create User auto-fills Username/Alias from Email and name.
     autoPopulate = true;
     showCloneLookup = false;
+    showImportPaste = false;
+    importPasteValue = '';
+    importWarnings = null;
 
     userData = {};
     selectedPermissionSetIds = [];
@@ -47,6 +51,10 @@ export default class CreateUserForm extends NavigationMixin(LightningElement) {
 
     get hasPackageLicenseOptions() {
         return this.packageLicenseOptions.length > 0;
+    }
+
+    get hasImportWarnings() {
+        return this.importWarnings != null;
     }
 
     connectedCallback() {
@@ -141,6 +149,120 @@ export default class CreateUserForm extends NavigationMixin(LightningElement) {
         } finally {
             this.isLoading = false;
         }
+    }
+
+    // --- Import logic ---
+
+    handleImportClick() {
+        const input = this.template.querySelector('input.import-file-input');
+        if (input) {
+            input.click();
+        }
+    }
+
+    handleImportFileChange(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            this.applyImport(reader.result);
+            // Reset so re-selecting the same file fires change again.
+            event.target.value = null;
+        };
+        reader.onerror = () => {
+            this.showToast('Error', 'Could not read the selected file.', 'error');
+        };
+        reader.readAsText(file);
+    }
+
+    handleOpenImportPaste() {
+        this.importPasteValue = '';
+        this.showImportPaste = true;
+    }
+
+    handleCancelImportPaste() {
+        this.showImportPaste = false;
+    }
+
+    handleImportPasteChange(event) {
+        this.importPasteValue = event.target.value;
+    }
+
+    handleImportPasteConfirm() {
+        if (!this.importPasteValue) {
+            this.showToast('Error', 'Paste a user definition first.', 'error');
+            return;
+        }
+        this.showImportPaste = false;
+        this.applyImport(this.importPasteValue);
+    }
+
+    async applyImport(definitionJson) {
+        this.isLoading = true;
+        try {
+            const res = await prepareImport({ definitionJson });
+            this.userData = { ...res.user };
+            this.selectedPermissionSetIds = [...res.permissionSetIds];
+            this.selectedPermSetGroupIds = [...res.permSetGroupIds];
+            this.selectedPermSetLicenseIds = [...res.permSetLicenseIds];
+            this.selectedGroupIds = [...res.groupIds];
+            this.selectedPackageLicenseIds = [...res.packageLicenseIds];
+
+            if (this.userData.UserLicenseId) {
+                this.filterProfilesByLicense(this.userData.UserLicenseId);
+            }
+
+            this.importWarnings = this.buildImportWarnings(res);
+            this.showToast(
+                'Imported',
+                'Definition loaded. Set email, username, and alias before creating.',
+                'success'
+            );
+        } catch (error) {
+            this.showToast('Import Error', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    // Flattens the Apex `unresolved`/`originals` payload into a template-friendly
+    // shape (keyed items for for:each). Returns null when there's nothing to show.
+    buildImportWarnings(res) {
+        const unresolved = res.unresolved || {};
+        const groups = [];
+        const addGroup = (title, items) => {
+            if (items && items.length) {
+                groups.push({
+                    key: title,
+                    title,
+                    items: items.map((label, i) => ({ id: `${title}-${i}`, label }))
+                });
+            }
+        };
+        if (unresolved.profile) {
+            addGroup('Profile — pick one manually', [unresolved.profile]);
+        }
+        if (unresolved.role) {
+            addGroup('Role', [unresolved.role]);
+        }
+        addGroup('Permission Sets', unresolved.permissionSets);
+        addGroup('Permission Set Groups', unresolved.permissionSetGroups);
+        addGroup('Permission Set Licenses', unresolved.permSetLicenses);
+        addGroup('Public Groups', unresolved.publicGroups);
+        addGroup('Package Licenses', unresolved.packageLicenses);
+
+        const originals = res.originals || {};
+        const hasOriginals = originals.email || originals.username || originals.alias;
+        if (!groups.length && !hasOriginals) {
+            return null;
+        }
+        return { groups, originals, hasUnresolved: groups.length > 0 };
+    }
+
+    handleDismissWarnings() {
+        this.importWarnings = null;
     }
 
     // --- Field change handlers ---

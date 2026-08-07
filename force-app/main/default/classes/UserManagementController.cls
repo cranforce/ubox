@@ -476,6 +476,420 @@ public with sharing class UserManagementController {
         return result;
     }
 
+    // --- Export / Import: portable, cross-org user definitions ----------------
+    // Clone copies record Ids, which only exist in one org. Export/Import instead
+    // captures assignments by *name* so a user can be recreated in another org
+    // (e.g. replicated across sandboxes). Export resolves Ids -> names here;
+    // Import (prepareImport) resolves names -> Ids in the *target* org, reusing
+    // the same availability filters as the getAvailable* pickers so resolved Ids
+    // are guaranteed to be valid dual-listbox options.
+
+    @AuraEnabled
+    public static Map<String, Object> exportUserDefinition(Id userId) {
+        User u = [
+            SELECT FirstName, LastName, Email, Username, Alias,
+                   Profile.Name, UserRole.DeveloperName,
+                   TimeZoneSidKey, LocaleSidKey, EmailEncodingKey, LanguageLocaleKey,
+                   IsActive, Department, Title, CompanyName,
+                   Street, City, State, PostalCode, Country,
+                   UserPermissionsMarketingUser, UserPermissionsKnowledgeUser,
+                   UserPermissionsInteractionUser, UserPermissionsSupportUser,
+                   UserPermissionsSFContentUser
+            FROM User
+            WHERE Id = :userId
+            LIMIT 1
+        ];
+
+        Map<String, Object> fields = new Map<String, Object>();
+        fields.put('FirstName', u.FirstName);
+        fields.put('LastName', u.LastName);
+        fields.put('Email', u.Email);
+        fields.put('Username', u.Username);
+        fields.put('Alias', u.Alias);
+        fields.put('ProfileName', u.Profile != null ? u.Profile.Name : null);
+        fields.put('UserRoleName', u.UserRole != null ? u.UserRole.DeveloperName : null);
+        fields.put('TimeZoneSidKey', u.TimeZoneSidKey);
+        fields.put('LocaleSidKey', u.LocaleSidKey);
+        fields.put('EmailEncodingKey', u.EmailEncodingKey);
+        fields.put('LanguageLocaleKey', u.LanguageLocaleKey);
+        fields.put('IsActive', u.IsActive);
+        fields.put('Department', u.Department);
+        fields.put('Title', u.Title);
+        fields.put('CompanyName', u.CompanyName);
+        fields.put('Street', u.Street);
+        fields.put('City', u.City);
+        fields.put('State', u.State);
+        fields.put('PostalCode', u.PostalCode);
+        fields.put('Country', u.Country);
+        fields.put('UserPermissionsMarketingUser', u.UserPermissionsMarketingUser);
+        fields.put('UserPermissionsKnowledgeUser', u.UserPermissionsKnowledgeUser);
+        fields.put('UserPermissionsInteractionUser', u.UserPermissionsInteractionUser);
+        fields.put('UserPermissionsSupportUser', u.UserPermissionsSupportUser);
+        fields.put('UserPermissionsSFContentUser', u.UserPermissionsSFContentUser);
+        // Adds StateCode/CountryCode when CCP is enabled (no-op otherwise).
+        addAddressCodes(userId, fields);
+
+        List<Map<String, Object>> permissionSets = new List<Map<String, Object>>();
+        for (PermissionSetAssignment psa : [
+            SELECT PermissionSet.Name, PermissionSet.Label, PermissionSet.NamespacePrefix
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :userId
+              AND PermissionSet.IsOwnedByProfile = false
+              AND PermissionSetGroupId = null
+        ]) {
+            permissionSets.add(new Map<String, Object>{
+                'name' => psa.PermissionSet.Name,
+                'namespacePrefix' => psa.PermissionSet.NamespacePrefix,
+                'label' => psa.PermissionSet.Label
+            });
+        }
+
+        List<Map<String, Object>> permissionSetGroups = new List<Map<String, Object>>();
+        for (PermissionSetAssignment psa : [
+            SELECT PermissionSetGroup.DeveloperName, PermissionSetGroup.MasterLabel,
+                   PermissionSetGroup.NamespacePrefix
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :userId
+              AND PermissionSetGroupId != null
+        ]) {
+            if (psa.PermissionSetGroup == null) continue;
+            permissionSetGroups.add(new Map<String, Object>{
+                'developerName' => psa.PermissionSetGroup.DeveloperName,
+                'namespacePrefix' => psa.PermissionSetGroup.NamespacePrefix,
+                'label' => psa.PermissionSetGroup.MasterLabel
+            });
+        }
+
+        List<Map<String, Object>> permissionSetLicenses = new List<Map<String, Object>>();
+        for (PermissionSetLicenseAssign psla : [
+            SELECT PermissionSetLicense.DeveloperName, PermissionSetLicense.MasterLabel
+            FROM PermissionSetLicenseAssign
+            WHERE AssigneeId = :userId
+        ]) {
+            if (psla.PermissionSetLicense == null) continue;
+            permissionSetLicenses.add(new Map<String, Object>{
+                'developerName' => psla.PermissionSetLicense.DeveloperName,
+                'label' => psla.PermissionSetLicense.MasterLabel
+            });
+        }
+
+        List<Map<String, Object>> publicGroups = new List<Map<String, Object>>();
+        for (GroupMember gm : [
+            SELECT Group.DeveloperName, Group.Name
+            FROM GroupMember
+            WHERE UserOrGroupId = :userId
+              AND Group.Type = 'Regular'
+        ]) {
+            if (gm.Group == null) continue;
+            publicGroups.add(new Map<String, Object>{
+                'developerName' => gm.Group.DeveloperName,
+                'label' => gm.Group.Name
+            });
+        }
+
+        List<Map<String, Object>> packageLicenses = new List<Map<String, Object>>();
+        for (UserPackageLicense upl : [
+            SELECT PackageLicense.NamespacePrefix
+            FROM UserPackageLicense
+            WHERE UserId = :userId
+        ]) {
+            if (upl.PackageLicense == null) continue;
+            packageLicenses.add(new Map<String, Object>{
+                'namespacePrefix' => upl.PackageLicense.NamespacePrefix
+            });
+        }
+
+        Map<String, Object> definition = new Map<String, Object>{
+            'fields' => fields,
+            'permissionSets' => permissionSets,
+            'permissionSetGroups' => permissionSetGroups,
+            'permissionSetLicenses' => permissionSetLicenses,
+            'publicGroups' => publicGroups,
+            'packageLicenses' => packageLicenses
+        };
+
+        Organization org = [SELECT Id, Name, IsSandbox FROM Organization LIMIT 1];
+        Map<String, Object> envelope = new Map<String, Object>{
+            'uboxUserDefinitionVersion' => 1,
+            'exportedAt' => Datetime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\''),
+            'source' => new Map<String, Object>{
+                'orgId' => org.Id,
+                'orgName' => org.Name,
+                'isSandbox' => org.IsSandbox,
+                'userLabel' => u.LastName + ', ' + u.FirstName
+            },
+            'users' => new List<Object>{ definition }
+        };
+
+        uBoxLogService.createLogAsync(
+            'Export User', userId, UserInfo.getUserId(), 'Success',
+            JSON.serialize(new Map<String, Object>{ 'user' => u.LastName + ', ' + u.FirstName }),
+            false
+        );
+
+        return envelope;
+    }
+
+    @AuraEnabled
+    public static Map<String, Object> prepareImport(String definitionJson) {
+        if (String.isBlank(definitionJson)) {
+            throw importError('No definition provided to import.');
+        }
+        Object parsed;
+        try {
+            parsed = JSON.deserializeUntyped(definitionJson);
+        } catch (Exception e) {
+            throw importError('The file is not valid JSON.');
+        }
+        if (!(parsed instanceof Map<String, Object>)) {
+            throw importError('Unrecognized definition format.');
+        }
+        Map<String, Object> envelope = (Map<String, Object>) parsed;
+
+        Object versionObj = envelope.get('uboxUserDefinitionVersion');
+        Integer version;
+        try {
+            version = versionObj == null ? null : Integer.valueOf(String.valueOf(versionObj));
+        } catch (Exception e) {
+            version = null;
+        }
+        if (version != 1) {
+            throw importError('Unsupported definition version. This uBox version expects version 1.');
+        }
+
+        List<Object> users = asObjectList(envelope.get('users'));
+        if (users.isEmpty()) {
+            throw importError('The definition contains no users to import.');
+        }
+        Map<String, Object> def = (Map<String, Object>) users[0];
+        Map<String, Object> srcFields = def.get('fields') == null
+            ? new Map<String, Object>()
+            : (Map<String, Object>) def.get('fields');
+
+        Map<String, Object> userData = new Map<String, Object>();
+        for (String key : new List<String>{
+            'FirstName', 'LastName', 'TimeZoneSidKey', 'LocaleSidKey', 'EmailEncodingKey',
+            'LanguageLocaleKey', 'Department', 'Title', 'CompanyName',
+            'Street', 'City', 'State', 'PostalCode', 'Country', 'StateCode', 'CountryCode'
+        }) {
+            if (srcFields.containsKey(key)) {
+                userData.put(key, srcFields.get(key));
+            }
+        }
+        userData.put('IsActive', srcFields.get('IsActive') == true);
+        for (String flag : new List<String>{
+            'UserPermissionsMarketingUser', 'UserPermissionsKnowledgeUser',
+            'UserPermissionsInteractionUser', 'UserPermissionsSupportUser',
+            'UserPermissionsSFContentUser'
+        }) {
+            userData.put(flag, srcFields.get(flag) == true);
+        }
+        // Blank the org-unique fields so the admin must supply new values.
+        userData.put('Email', '');
+        userData.put('Username', '');
+        userData.put('Alias', '');
+
+        Map<String, Object> unresolved = new Map<String, Object>{
+            'permissionSets' => new List<Object>(),
+            'permissionSetGroups' => new List<Object>(),
+            'permSetLicenses' => new List<Object>(),
+            'publicGroups' => new List<Object>(),
+            'packageLicenses' => new List<Object>()
+        };
+
+        // Profile (required to create a user; if missing the admin picks one).
+        String profileName = (String) srcFields.get('ProfileName');
+        if (String.isNotBlank(profileName)) {
+            List<Profile> profs = [SELECT Id, UserLicenseId FROM Profile WHERE Name = :profileName LIMIT 1];
+            if (!profs.isEmpty()) {
+                userData.put('ProfileId', profs[0].Id);
+                userData.put('UserLicenseId', profs[0].UserLicenseId);
+            } else {
+                unresolved.put('profile', profileName);
+            }
+        }
+
+        // Role (optional).
+        String roleName = (String) srcFields.get('UserRoleName');
+        if (String.isNotBlank(roleName)) {
+            List<UserRole> roles = [SELECT Id FROM UserRole WHERE DeveloperName = :roleName LIMIT 1];
+            if (!roles.isEmpty()) {
+                userData.put('UserRoleId', roles[0].Id);
+            } else {
+                unresolved.put('role', roleName);
+            }
+        }
+
+        // Permission sets — matched by API name + namespace, same filter as getAvailablePermissionSets.
+        List<Id> permissionSetIds = new List<Id>();
+        List<Object> psItems = asObjectList(def.get('permissionSets'));
+        if (!psItems.isEmpty()) {
+            Set<String> names = collect(psItems, 'name');
+            Map<String, Id> byKey = new Map<String, Id>();
+            for (PermissionSet ps : [
+                SELECT Id, Name, NamespacePrefix FROM PermissionSet
+                WHERE Name IN :names AND IsOwnedByProfile = false AND PermissionSetGroupId = null
+            ]) {
+                byKey.put(nsKey(ps.NamespacePrefix, ps.Name), ps.Id);
+            }
+            for (Object o : psItems) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                Id resolved = byKey.get(nsKey((String) m.get('namespacePrefix'), (String) m.get('name')));
+                if (resolved != null) {
+                    permissionSetIds.add(resolved);
+                } else {
+                    ((List<Object>) unresolved.get('permissionSets')).add(importLabel(m));
+                }
+            }
+        }
+
+        // Permission set groups — matched by DeveloperName + namespace, only 'Updated' groups.
+        List<Id> permSetGroupIds = new List<Id>();
+        List<Object> psgItems = asObjectList(def.get('permissionSetGroups'));
+        if (!psgItems.isEmpty()) {
+            Set<String> names = collect(psgItems, 'developerName');
+            Map<String, Id> byKey = new Map<String, Id>();
+            for (PermissionSetGroup psg : [
+                SELECT Id, DeveloperName, NamespacePrefix FROM PermissionSetGroup
+                WHERE DeveloperName IN :names AND Status = 'Updated'
+            ]) {
+                byKey.put(nsKey(psg.NamespacePrefix, psg.DeveloperName), psg.Id);
+            }
+            for (Object o : psgItems) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                Id resolved = byKey.get(nsKey((String) m.get('namespacePrefix'), (String) m.get('developerName')));
+                if (resolved != null) {
+                    permSetGroupIds.add(resolved);
+                } else {
+                    ((List<Object>) unresolved.get('permissionSetGroups')).add(importLabel(m));
+                }
+            }
+        }
+
+        // Permission set licenses — matched by DeveloperName, only 'Active'.
+        List<Id> permSetLicenseIds = new List<Id>();
+        List<Object> pslItems = asObjectList(def.get('permissionSetLicenses'));
+        if (!pslItems.isEmpty()) {
+            Set<String> names = collect(pslItems, 'developerName');
+            Map<String, Id> byName = new Map<String, Id>();
+            for (PermissionSetLicense psl : [
+                SELECT Id, DeveloperName FROM PermissionSetLicense
+                WHERE DeveloperName IN :names AND Status = 'Active'
+            ]) {
+                byName.put(psl.DeveloperName, psl.Id);
+            }
+            for (Object o : pslItems) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                Id resolved = byName.get((String) m.get('developerName'));
+                if (resolved != null) {
+                    permSetLicenseIds.add(resolved);
+                } else {
+                    ((List<Object>) unresolved.get('permSetLicenses')).add(importLabel(m));
+                }
+            }
+        }
+
+        // Public groups — matched by DeveloperName, Regular groups only.
+        List<Id> groupIds = new List<Id>();
+        List<Object> grpItems = asObjectList(def.get('publicGroups'));
+        if (!grpItems.isEmpty()) {
+            Set<String> names = collect(grpItems, 'developerName');
+            Map<String, Id> byName = new Map<String, Id>();
+            for (Group g : [
+                SELECT Id, DeveloperName FROM Group
+                WHERE DeveloperName IN :names AND Type = 'Regular'
+            ]) {
+                byName.put(g.DeveloperName, g.Id);
+            }
+            for (Object o : grpItems) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                Id resolved = byName.get((String) m.get('developerName'));
+                if (resolved != null) {
+                    groupIds.add(resolved);
+                } else {
+                    ((List<Object>) unresolved.get('publicGroups')).add(importLabel(m));
+                }
+            }
+        }
+
+        // Package licenses — matched by NamespacePrefix.
+        List<Id> packageLicenseIds = new List<Id>();
+        List<Object> pkgItems = asObjectList(def.get('packageLicenses'));
+        if (!pkgItems.isEmpty()) {
+            Set<String> names = collect(pkgItems, 'namespacePrefix');
+            Map<String, Id> byName = new Map<String, Id>();
+            for (PackageLicense pl : [
+                SELECT Id, NamespacePrefix FROM PackageLicense
+                WHERE NamespacePrefix IN :names
+            ]) {
+                byName.put(pl.NamespacePrefix, pl.Id);
+            }
+            for (Object o : pkgItems) {
+                Map<String, Object> m = (Map<String, Object>) o;
+                Id resolved = byName.get((String) m.get('namespacePrefix'));
+                if (resolved != null) {
+                    packageLicenseIds.add(resolved);
+                } else {
+                    ((List<Object>) unresolved.get('packageLicenses')).add(importLabel(m));
+                }
+            }
+        }
+
+        Map<String, Object> result = new Map<String, Object>();
+        result.put('user', userData);
+        result.put('permissionSetIds', permissionSetIds);
+        result.put('permSetGroupIds', permSetGroupIds);
+        result.put('permSetLicenseIds', permSetLicenseIds);
+        result.put('groupIds', groupIds);
+        result.put('packageLicenseIds', packageLicenseIds);
+        result.put('unresolved', unresolved);
+        result.put('originals', new Map<String, Object>{
+            'email' => srcFields.get('Email'),
+            'username' => srcFields.get('Username'),
+            'alias' => srcFields.get('Alias')
+        });
+        return result;
+    }
+
+    private static AuraHandledException importError(String msg) {
+        AuraHandledException ex = new AuraHandledException(msg);
+        ex.setMessage(msg);
+        return ex;
+    }
+
+    private static List<Object> asObjectList(Object o) {
+        return o == null ? new List<Object>() : (List<Object>) o;
+    }
+
+    private static Set<String> collect(List<Object> items, String key) {
+        Set<String> values = new Set<String>();
+        for (Object o : items) {
+            Map<String, Object> m = (Map<String, Object>) o;
+            Object v = m.get(key);
+            if (v != null) values.add(String.valueOf(v));
+        }
+        return values;
+    }
+
+    // Namespace-qualified match key so 'ubox__Foo' can't collide with a local 'Foo'.
+    private static String nsKey(String ns, String name) {
+        return (String.isBlank(ns) ? '' : ns + '__') + name;
+    }
+
+    private static String importLabel(Map<String, Object> m) {
+        Object label = m.get('label');
+        if (label != null && String.isNotBlank(String.valueOf(label))) {
+            return String.valueOf(label);
+        }
+        for (String key : new List<String>{ 'name', 'developerName', 'namespacePrefix' }) {
+            Object v = m.get(key);
+            if (v != null && String.isNotBlank(String.valueOf(v))) {
+                return String.valueOf(v);
+            }
+        }
+        return '(unknown)';
+    }
+
     // --- Address: State & Country Picklist (CCP) support ---------------------
     // StateCode/CountryCode exist on User ONLY when State and Country/Territory
     // Picklists are enabled, so every reference to them here is dynamic to keep

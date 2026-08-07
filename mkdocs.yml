@@ -58,6 +58,7 @@ nav:
       - Create User: features/create-user.md
       - Edit User: features/edit-user.md
       - Clone from User: features/clone-from-user.md
+      - Export / Import: features/export-import.md
       - Assignments: features/assignments.md
       - Permission Set Explorer: features/permission-set-explorer.md
       - Permissions Comparison: features/permissions-comparison.md
