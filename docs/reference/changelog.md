@@ -4,6 +4,10 @@ Notable changes per release, newest first. Entries are reconstructed from the pa
 release history; each version corresponds to a promoted managed-package version in
 `sfdx-project.json`.
 
+## 0.16.0 — _in development_
+
+- **[Import into Edit User](../features/export-import.md#adding-permissions-to-an-existing-user-edit-user)** — the same exported `.json` can now be applied to an *existing* user from the Edit User screen to grant the definition's permissions (same org or across orgs). Import here is **permissions-only** (identity and profile are untouched) and **add-only** (existing assignments are never removed).
+
 ## 0.15.0 — 2026-08-07
 
 - **New: [Export / Import User Definitions](../features/export-import.md)** — export a user

@@ -11,6 +11,7 @@ import getAvailablePackageLicenses from '@salesforce/apex/UserManagementControll
 import getAllUsers from '@salesforce/apex/UserManagementController.getAllUsers';
 import getEditUserData from '@salesforce/apex/UserManagementController.getEditUserData';
 import exportUserDefinition from '@salesforce/apex/UserManagementController.exportUserDefinition';
+import prepareImport from '@salesforce/apex/UserManagementController.prepareImport';
 import updateUser from '@salesforce/apex/UserManagementController.updateUser';
 
 export default class EditUserForm extends NavigationMixin(LightningElement) {
@@ -21,6 +22,9 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     activeTab = 'details';
     showExportFallback = false;
     exportJson = '';
+    showImportPaste = false;
+    importPasteValue = '';
+    importWarnings = null;
 
     allUsers = [];
 
@@ -57,6 +61,10 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
 
     get hasPackageLicenseOptions() {
         return this.packageLicenseOptions.length > 0;
+    }
+
+    get hasImportWarnings() {
+        return this.importWarnings != null;
     }
 
     get selectedUserName() {
@@ -104,6 +112,10 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
     }
 
     async handleUserSelected(event) {
+        // Clear any import state from a previously selected user.
+        this.importWarnings = null;
+        this.showImportPaste = false;
+
         const userId = event.detail.userId;
         if (!userId) {
             this.selectedUserId = null;
@@ -187,6 +199,115 @@ export default class EditUserForm extends NavigationMixin(LightningElement) {
 
     handleCloseExportFallback() {
         this.showExportFallback = false;
+    }
+
+    // --- Import logic (applies a definition's permissions to the loaded user) ---
+    // Scope: permission assignments only — user fields/identity are never touched.
+    // Merge: add-only — imported assignments are unioned onto the current
+    // selections and never removed. The admin reviews the dual-lists and clicks
+    // Save Changes to apply (updateUser diffs and assigns).
+
+    handleImportClick() {
+        const input = this.template.querySelector('input.import-file-input');
+        if (input) {
+            input.click();
+        }
+    }
+
+    handleImportFileChange(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            this.applyImport(reader.result);
+            event.target.value = null;
+        };
+        reader.onerror = () => {
+            this.showToast('Error', 'Could not read the selected file.', 'error');
+        };
+        reader.readAsText(file);
+    }
+
+    handleOpenImportPaste() {
+        this.importPasteValue = '';
+        this.showImportPaste = true;
+    }
+
+    handleCancelImportPaste() {
+        this.showImportPaste = false;
+    }
+
+    handleImportPasteChange(event) {
+        this.importPasteValue = event.target.value;
+    }
+
+    handleImportPasteConfirm() {
+        if (!this.importPasteValue) {
+            this.showToast('Error', 'Paste a user definition first.', 'error');
+            return;
+        }
+        this.showImportPaste = false;
+        this.applyImport(this.importPasteValue);
+    }
+
+    async applyImport(definitionJson) {
+        this.isLoading = true;
+        try {
+            const res = await prepareImport({ definitionJson });
+            // Permissions-only, add-only: union resolved Ids into current selections
+            // without touching userData (name/profile/identity stay as loaded).
+            this.selectedPermissionSetIds = this.mergeIds(this.selectedPermissionSetIds, res.permissionSetIds);
+            this.selectedPermSetGroupIds = this.mergeIds(this.selectedPermSetGroupIds, res.permSetGroupIds);
+            this.selectedPermSetLicenseIds = this.mergeIds(this.selectedPermSetLicenseIds, res.permSetLicenseIds);
+            this.selectedGroupIds = this.mergeIds(this.selectedGroupIds, res.groupIds);
+            this.selectedPackageLicenseIds = this.mergeIds(this.selectedPackageLicenseIds, res.packageLicenseIds);
+
+            this.importWarnings = this.buildImportWarnings(res);
+            this.showToast(
+                'Imported',
+                "Permissions from the definition were added to this user's selections. Review and click Save Changes to apply.",
+                'success'
+            );
+        } catch (error) {
+            this.showToast('Import Error', this.extractErrorMessage(error), 'error');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    // Union two Id arrays into a new array (new reference so the dual-list re-renders).
+    mergeIds(current, incoming) {
+        const set = new Set(current || []);
+        (incoming || []).forEach(id => set.add(id));
+        return [...set];
+    }
+
+    // Edit import only touches assignments, so the warnings panel lists just the
+    // unresolved assignment categories (no profile/role or identity hints).
+    buildImportWarnings(res) {
+        const unresolved = res.unresolved || {};
+        const groups = [];
+        const addGroup = (title, items) => {
+            if (items && items.length) {
+                groups.push({
+                    key: title,
+                    title,
+                    items: items.map((label, i) => ({ id: `${title}-${i}`, label }))
+                });
+            }
+        };
+        addGroup('Permission Sets', unresolved.permissionSets);
+        addGroup('Permission Set Groups', unresolved.permissionSetGroups);
+        addGroup('Permission Set Licenses', unresolved.permSetLicenses);
+        addGroup('Public Groups', unresolved.publicGroups);
+        addGroup('Package Licenses', unresolved.packageLicenses);
+        return groups.length ? { groups } : null;
+    }
+
+    handleDismissWarnings() {
+        this.importWarnings = null;
     }
 
     async handleSetPassword() {

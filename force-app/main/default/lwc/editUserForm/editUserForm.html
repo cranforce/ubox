@@ -9,6 +9,18 @@
                     onclick={handleExport}
                 ></lightning-button>
                 <lightning-button
+                    label="Import Definition"
+                    icon-name="utility:upload"
+                    class="slds-var-m-right_x-small"
+                    onclick={handleImportClick}
+                ></lightning-button>
+                <lightning-button
+                    label="Paste JSON"
+                    icon-name="utility:paste"
+                    class="slds-var-m-right_x-small"
+                    onclick={handleOpenImportPaste}
+                ></lightning-button>
+                <lightning-button
                     label="Set Password"
                     icon-name="utility:lock"
                     class="slds-var-m-right_x-small"
@@ -19,6 +31,12 @@
                     icon-name="utility:new_window"
                     onclick={handleOpenUserRecord}
                 ></lightning-button>
+                <input
+                    type="file"
+                    accept="application/json,.json"
+                    class="import-file-input slds-hide"
+                    onchange={handleImportFileChange}
+                />
             </template>
         </div>
 
@@ -67,6 +85,59 @@
                     <template lwc:if={hasUserSelected}>
                         <lightning-tabset variant="scoped" active-tab-value={activeTab}>
                             <lightning-tab label="Details" value="details" onactive={handleTabActive}>
+                                <!-- Import: paste JSON fallback -->
+                                <template lwc:if={showImportPaste}>
+                                    <div class="slds-var-p-around_medium slds-theme_shade slds-border_bottom">
+                                        <lightning-textarea
+                                            label="Paste user definition JSON"
+                                            placeholder="Paste the contents of a uBox user-definition .json file to add its permissions to this user..."
+                                            value={importPasteValue}
+                                            onchange={handleImportPasteChange}
+                                        ></lightning-textarea>
+                                        <div class="slds-var-p-top_small">
+                                            <lightning-button
+                                                label="Add Permissions"
+                                                variant="brand"
+                                                onclick={handleImportPasteConfirm}
+                                                class="slds-var-m-right_x-small"
+                                            ></lightning-button>
+                                            <lightning-button label="Cancel" onclick={handleCancelImportPaste}></lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Import: unresolved-items warning panel -->
+                                <template lwc:if={hasImportWarnings}>
+                                    <div class="slds-var-p-around_medium">
+                                        <div class="slds-box slds-theme_warning">
+                                            <div class="slds-grid slds-grid_align-spread slds-var-m-bottom_x-small">
+                                                <h3 class="slds-text-heading_small">Imported with notes</h3>
+                                                <lightning-button-icon
+                                                    icon-name="utility:close"
+                                                    variant="bare"
+                                                    alternative-text="Dismiss"
+                                                    onclick={handleDismissWarnings}
+                                                ></lightning-button-icon>
+                                            </div>
+                                            <p class="slds-var-m-bottom_x-small">
+                                                These items from the definition don't exist in this org and were skipped.
+                                                Everything else was added to the selections below — review and
+                                                <strong>Save Changes</strong> to apply.
+                                            </p>
+                                            <template for:each={importWarnings.groups} for:item="grp">
+                                                <div key={grp.key} class="slds-var-m-bottom_x-small">
+                                                    <strong>{grp.title}</strong>
+                                                    <ul class="slds-list_dotted slds-var-m-left_medium">
+                                                        <template for:each={grp.items} for:item="it">
+                                                            <li key={it.id}>{it.label}</li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
                                 <div class="slds-grid slds-gutters slds-var-p-around_medium">
                                     <div class="slds-col slds-size_1-of-2">
                                         <lightning-card title="User Information" icon-name="standard:user">
